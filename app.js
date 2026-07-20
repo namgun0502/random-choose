@@ -85,18 +85,26 @@ const closeModalBtn = document.getElementById('closeModalBtn');
 
 
 // 3. 초기화 설정 및 이벤트 바인딩
-window.addEventListener('DOMContentLoaded', async () => {
+async function initializeApp() {
     resizeCanvas();
     window.addEventListener('resize', resizeCanvas);
     setupEvents();
     updateUI();
 
-    // 페이지 접속 시 기존에 등록한 Supabase 계정이 있다면 자동 연결 및 인원 로드
+    // 페이지 접속 시 자동 연결 및 인원 로드
     await initSupabase();
     if (supabase) {
-        await fetchSupabaseMembers(true); // silent=true로 자동 패치 실패 시 팝업 경고 방지
+        // silent=false로 설정하여 접속 성공/실패 여부를 팝업으로 사용자에게 명시적으로 알립니다.
+        await fetchSupabaseMembers(false); 
     }
-});
+}
+
+// DOM 로딩 완료 상태에 맞춰 안전하게 초기화 실행
+if (document.readyState === 'loading') {
+    window.addEventListener('DOMContentLoaded', initializeApp);
+} else {
+    initializeApp();
+}
 
 // Canvas 크기 조절 함수 (반응형 16:10 비율 유지)
 function resizeCanvas() {
