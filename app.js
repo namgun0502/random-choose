@@ -24,9 +24,9 @@ let supabaseKey = '';
 const DEFAULT_SUPABASE_URL = "https://qzhgsshyhmnczmreagqd.supabase.co"; 
 const DEFAULT_SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF6aGdzc2h5aG1uY3ptcmVhZ3FkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIyNzc0NzksImV4cCI6MjA5Nzg1MzQ3OX0.2NZxyClmIpj7WtUuZtexZqAMuTnC7udF5FejwitzvcU";
 
-// Canvas 관련 변수
+// Canvas 관련 변수 (null 체크로 스크립트 충돌 방지)
 const canvas = document.getElementById('gameCanvas');
-const ctx = canvas.getContext('2d');
+const ctx = canvas ? canvas.getContext('2d') : null;
 let animationFrameId = null;
 
 // 게임 애니메이션 객체들
@@ -320,28 +320,35 @@ function playVictorySound() {
 
 // 참여자 추가 핸들러 (동기 처리 - UI 즉시 반영)
 function handleAddName() {
-    const rawName = nameInput.value.trim();
-    if (!rawName) {
-        alert("이름을 입력해 주세요!");
-        nameInput.focus();
-        return;
-    }
-    
-    if (participants.some(p => p.name === rawName)) {
-        alert("이미 등록된 이름입니다. 다른 이름이나 구분 가능한 표시를 넣어주세요!");
-        nameInput.focus();
-        return;
-    }
+    try {
+        const rawName = nameInput.value.trim();
+        if (!rawName) {
+            alert("이름을 입력해 주세요!");
+            nameInput.focus();
+            return;
+        }
 
-    // ① 로컬 배열에 먼저 추가 (화면에 즉시 반영)
-    participants.push({ name: rawName, number: 0 });
-    nameInput.value = "";
-    nameInput.focus();
-    shuffleAndAssignNumbers();
-    updateUI();
+        if (participants.some(p => p.name === rawName)) {
+            alert("이미 등록된 이름입니다. 다른 이름이나 구분 가능한 표시를 넣어주세요!");
+            nameInput.focus();
+            return;
+        }
 
-    // ② Supabase 저장은 별도 비동기 함수로 분리 (UI 업데이트와 독립적으로 동작)
-    saveNameToSupabase(rawName);
+        // ① 로컬 배열에 추가
+        participants.push({ name: rawName, number: 0 });
+        nameInput.value = "";
+        nameInput.focus();
+        shuffleAndAssignNumbers();
+        updateUI();
+
+        // ② Supabase 저장 (백그라운드 동작 - UI와 독립)
+        saveNameToSupabase(rawName);
+
+    } catch (err) {
+        // 숨겨진 에러가 있으면 화면에 알려드립니다
+        alert("오류 발생: " + err.message + "\n\nF12 → Console 탭에서 자세한 내용을 확인하세요.");
+        console.error("handleAddName 에러:", err);
+    }
 }
 
 // Supabase DB에 이름을 영구 저장하는 비동기 함수 (handleAddName과 분리)
