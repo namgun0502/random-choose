@@ -254,7 +254,13 @@ function shuffle(){
                 setTimeout(tryConnect, 100);
             } else {
                 console.warn('수파베이스 SDK 미로드 - 로칼 모드로 작동');
-                alert('수파베이스 연동 실패: 네트워크 연결 혹은 라이브러리 차단 가능성이 있습니다. 오프라인 모드로 게임을 시작합니다.');
+                var sdkType = typeof window.supabase;
+                var hasCreateClient = (window.supabase && typeof window.supabase.createClient !== 'undefined');
+                alert('수파베이스 연동 실패!\n' +
+                      '- window.supabase 타입: ' + sdkType + '\n' +
+                      '- createClient 존재여부: ' + hasCreateClient + '\n' +
+                      '- 현재 탐색 시도 횟수: ' + retries + '회\n\n' +
+                      '이 메시지가 나온다면 브라우저를 강제 새로고침(Ctrl+Shift+R)해 주세요.');
             }
             return;
         }
@@ -269,6 +275,7 @@ function shuffle(){
     }
     tryConnect();
 })();
+
 
 
 function loadFromDb(){
