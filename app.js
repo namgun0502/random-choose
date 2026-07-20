@@ -239,18 +239,37 @@ function shuffle(){
 }
 
 // =============================================
-// [6] 수파베이스 연동
+// [6] 수파베이스 연동 (안전 대기 루프 적용)
 // =============================================
 (function initDb(){
-    try {
-        var sdk = _SDK || window.supabase || null;
+    var retries = 0;
+    function tryConnect() {
+        var sdk = window.supabase || null;
         var mk  = (typeof createClient !== 'undefined') ? createClient
                : (sdk && sdk.createClient ? sdk.createClient : null);
-        if(!mk){ console.warn('수파베이스 SDK 미로드 - 로칼 모드로 작동'); return; }
-        supabase = mk(SUPABASE_URL, SUPABASE_KEY);
-        loadFromDb();
-    } catch(e){ console.error('수파베이스 초기화 오류:', e.message); }
+        
+        if(!mk){
+            retries++;
+            if (retries < 50) {
+                setTimeout(tryConnect, 100);
+            } else {
+                console.warn('수파베이스 SDK 미로드 - 로칼 모드로 작동');
+                alert('수파베이스 연동 실패: 네트워크 연결 혹은 라이브러리 차단 가능성이 있습니다. 오프라인 모드로 게임을 시작합니다.');
+            }
+            return;
+        }
+        
+        try {
+            supabase = mk(SUPABASE_URL, SUPABASE_KEY);
+            console.log('수파베이스 연결 성공!');
+            loadFromDb();
+        } catch(e) {
+            console.error('수파베이스 클라이언트 생성 오류:', e.message);
+        }
+    }
+    tryConnect();
 })();
+
 
 function loadFromDb(){
     if(!supabase) {
