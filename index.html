@@ -4,24 +4,21 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>대포 랜덤 당첨 게임 - Cannon Draw</title>
-    <!-- 구글 폰트 Noto Sans KR, Outfit 로드 -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <!-- 배경 우주 먼지/별 효과용 백그라운드 오버레이 -->
     <div class="stars-background"></div>
 
     <div class="app-container">
-        <!-- 헤더 영역 -->
+        <!-- 헤더 -->
         <header class="app-header">
             <div class="logo">
                 <span class="icon">💣</span>
                 <h1>CANNON <span class="highlight">DRAW</span></h1>
             </div>
-            <!-- 사운드 토글 컨트롤 -->
             <div class="header-controls">
                 <button id="soundToggleBtn" class="control-btn" title="사운드 켜기/끄기">
                     <span id="soundIcon">🔊</span> <span id="soundText">소리 켬</span>
@@ -29,32 +26,29 @@
             </div>
         </header>
 
-        <!-- 1단계: 준비 화면 (참여자 등록 & 설정) -->
+        <!-- 1단계: 준비 화면 -->
         <section id="stepReady" class="game-card active">
             <div class="card-header">
                 <h2>🎮 게임 준비하기</h2>
                 <p class="subtitle">참여할 사람들의 이름을 적고 대포를 몇 번 쏠지 결정하세요.</p>
             </div>
 
-            <!-- 참여자 등록 영역 -->
             <div class="input-section">
                 <label for="nameInput">참여자 이름 등록</label>
                 <div class="input-group">
                     <input type="text" id="nameInput" placeholder="이름을 입력하세요 (예: 남건)" autocomplete="off" maxlength="10">
                     <button type="button" id="addNameBtn" class="btn btn-primary">추가</button>
                 </div>
-                <p class="input-tip">* 등록된 순서대로 1번부터 번호가 무작위(랜덤)로 섞여서 배정됩니다.</p>
+                <p class="input-tip">* 수파베이스에서 자동으로 불러오거나, 직접 추가할 수 있습니다.</p>
             </div>
 
-            <!-- 참여자 명단 및 배정된 숫자 칩 표시 영역 -->
             <div class="list-section">
                 <h3>👥 등록된 참여자 (<span id="participantCount">0</span>명)</h3>
                 <div id="participantList" class="participant-chips">
-                    <p class="empty-message">등록된 사람이 없습니다. 이름을 입력하여 추가해 주세요.</p>
+                    <p class="empty-message">등록된 사람이 없습니다. 이름을 추가해 주세요.</p>
                 </div>
             </div>
 
-            <!-- 게임 설정 영역 -->
             <div class="settings-section">
                 <div class="setting-item">
                     <div class="setting-info">
@@ -68,70 +62,59 @@
                 </div>
             </div>
 
-            <!-- 시작 버튼 -->
-            <button id="startGameBtn" class="btn btn-accent btn-large" disabled>게임 시작하기 🚀</button>
+            <button type="button" id="startGameBtn" class="btn btn-accent btn-large" disabled>게임 시작하기 🚀</button>
         </section>
 
-        <!-- 2단계: 대포 발사 화면 (게임 스테이지) -->
+        <!-- 2단계: 대포 발사 화면 -->
         <section id="stepPlay" class="game-stage">
             <div class="stage-header">
                 <div class="stage-info">
                     <h2>🎯 대포 발사 스테이지</h2>
                     <p>남은 발사 횟수: <span id="remainingShots" class="highlight-badge">0</span></p>
                 </div>
-                <button id="quitGameBtn" class="btn btn-danger btn-sm">게임 중단</button>
+                <button type="button" id="quitGameBtn" class="btn btn-danger btn-sm">게임 중단</button>
             </div>
-
-            <!-- 대포 게임 렌더링용 HTML5 Canvas -->
             <div class="canvas-wrapper">
                 <canvas id="gameCanvas"></canvas>
-                <!-- 애니메이션 도중 인터랙션 방지 오버레이 -->
                 <div id="canvasOverlay" class="canvas-overlay"></div>
             </div>
-
-            <!-- 대포 조작 및 상태 패널 -->
             <div class="stage-controls">
-                <button id="fireCannonBtn" class="btn btn-accent btn-large pulse">🔥 대포 발사!</button>
+                <button type="button" id="fireCannonBtn" class="btn btn-accent btn-large pulse">🔥 대포 발사!</button>
                 <div class="guide-text">대포 발사 버튼을 누르면 대포가 알아서 조준하고 쏩니다!</div>
             </div>
         </section>
 
-        <!-- 3단계: 최종 결과 화면 -->
+        <!-- 3단계: 결과 화면 -->
         <section id="stepResult" class="game-card">
             <div class="card-header text-center">
                 <div class="trophy-icon">🏆</div>
                 <h2>축하합니다! 최종 당첨자</h2>
                 <p class="subtitle">대포에 맞아 번호판이 폭발한 행운의 주인공들입니다.</p>
             </div>
-
-            <!-- 최종 당첨자 카드 리스트 -->
             <div class="winners-section">
-                <div id="winnersList" class="winners-list">
-                    <!-- 당첨자 카드가 동적으로 추가됩니다 -->
-                </div>
+                <div id="winnersList" class="winners-list"></div>
             </div>
-
-            <!-- 하단 제어 버튼 -->
             <div class="result-actions">
-                <button id="restartSameBtn" class="btn btn-primary">🔄 번호 섞어 다시 하기</button>
-                <button id="resetAllBtn" class="btn btn-secondary">🏠 처음으로 (새로 만들기)</button>
+                <button type="button" id="restartSameBtn" class="btn btn-primary">🔄 번호 섞어 다시 하기</button>
+                <button type="button" id="resetAllBtn" class="btn btn-secondary">🏠 처음으로 (새로 만들기)</button>
             </div>
         </section>
     </div>
 
-    <!-- 개별 당첨 팝업 모달 (대포가 과녁을 맞춘 순간 등장) -->
+    <!-- 당첨 팝업 모달 -->
     <div id="hitModal" class="modal-overlay">
         <div class="modal-content">
             <div class="modal-badge">🎯 HIT!</div>
             <div class="modal-number-circle" id="hitNumber">0</div>
             <h3 class="modal-winner-name" id="hitName">이름</h3>
             <p class="modal-message">번호판이 폭발하며 당첨되었습니다!</p>
-            <button id="closeModalBtn" class="btn btn-accent">계속하기</button>
+            <button type="button" id="closeModalBtn" class="btn btn-accent">계속하기</button>
         </div>
     </div>
 
-    <!-- Supabase JS Client SDK 로드 -->
+    <!-- Supabase SDK -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="app.js?v=1.4"></script>
+    <!-- 앱 메인 스크립트 -->
+    <script src="app.js"></script>
 </body>
 </html>
