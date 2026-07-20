@@ -83,15 +83,6 @@ const hitNumber = document.getElementById('hitNumber');
 const hitName = document.getElementById('hitName');
 const closeModalBtn = document.getElementById('closeModalBtn');
 
-// Supabase 관련 DOM 요소들
-const supabaseSetupBtn = document.getElementById('supabaseSetupBtn');
-const supabaseStatusDot = document.getElementById('supabaseStatusDot');
-const loadSupabaseBtn = document.getElementById('loadSupabaseBtn');
-const supabaseModal = document.getElementById('supabaseModal');
-const supabaseUrlInput = document.getElementById('supabaseUrlInput');
-const supabaseKeyInput = document.getElementById('supabaseKeyInput');
-const saveSupabaseBtn = document.getElementById('saveSupabaseBtn');
-const closeSupabaseModalBtn = document.getElementById('closeSupabaseModalBtn');
 
 // 3. 초기화 설정 및 이벤트 바인딩
 window.addEventListener('DOMContentLoaded', async () => {
@@ -168,47 +159,6 @@ function setupEvents() {
     // 결과 화면 제어 버튼들
     restartSameBtn.addEventListener('click', restartSameMembers);
     resetAllBtn.addEventListener('click', resetAllGame);
-
-    // --- Supabase 관련 이벤트 핸들러 ---
-    // Supabase 설정 열기
-    supabaseSetupBtn.addEventListener('click', () => {
-        // 코드에 적힌 기본값(DEFAULT)이 있으면 우선 보여주고, 없으면 로컬스토리지 값을 보여줍니다.
-        supabaseUrlInput.value = DEFAULT_SUPABASE_URL || localStorage.getItem('supabaseUrl') || '';
-        supabaseKeyInput.value = DEFAULT_SUPABASE_KEY || localStorage.getItem('supabaseKey') || '';
-        supabaseModal.classList.add('active');
-    });
-
-    // Supabase 설정 닫기
-    closeSupabaseModalBtn.addEventListener('click', () => {
-        supabaseModal.classList.remove('active');
-    });
-
-    // Supabase 설정 저장 및 연결
-    saveSupabaseBtn.addEventListener('click', async () => {
-        const url = supabaseUrlInput.value.trim();
-        const key = supabaseKeyInput.value.trim();
-
-        if (!url || !key) {
-            alert("Supabase Project URL과 Anon Key를 모두 입력해 주세요!");
-            return;
-        }
-
-        localStorage.setItem('supabaseUrl', url);
-        localStorage.setItem('supabaseKey', key);
-        
-        supabaseModal.classList.remove('active');
-
-        // 초기화 및 인원 불러오기 진행
-        await initSupabase();
-        if (supabase) {
-            await fetchSupabaseMembers();
-        }
-    });
-
-    // Supabase 인원 수동 불러오기
-    loadSupabaseBtn.addEventListener('click', async () => {
-        await fetchSupabaseMembers();
-    });
 }
 
 // 4. 사운드 효과음 합성 엔진 (Web Audio API 사용)
@@ -1177,22 +1127,10 @@ async function initSupabase() {
     }
 }
 
-// 연결 상태에 따라 표시등 LED 및 버튼 상태를 바꾸는 헬퍼 함수
+// 연결 상태를 콘솔에만 기록하는 내부 헬퍼 함수 (UI 표시 없이 백그라운드에서만 동작)
 function setSupabaseStatus(status) {
-    supabaseStatusDot.className = 'status-dot ' + status;
-    
-    if (status === 'connected') {
-        loadSupabaseBtn.disabled = false;
-        loadSupabaseBtn.title = "수파베이스에서 참여자 목록을 새로 불러옵니다";
-    } else {
-        loadSupabaseBtn.disabled = true;
-        loadSupabaseBtn.title = "수파베이스 연결이 필요합니다";
-        if (status === 'disconnected') {
-            supabaseStatusDot.classList.add('disconnected');
-        } else if (status === 'loading') {
-            supabaseStatusDot.classList.add('loading');
-        }
-    }
+    // 연결 상태 변경 시 브라우저 개발자 콘솔에서만 확인 가능합니다.
+    console.log('[Supabase 상태]', status);
 }
 
 // Supabase 데이터베이스로부터 인원 정보를 가져오는 함수
