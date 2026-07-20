@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>대포 랜덤 당첨 게임 - Cannon Draw</title>
+    <title>랜덤 초이스 - 대포 & 사다리 게임</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
@@ -17,8 +17,8 @@
         <!-- 헤더 -->
         <header class="app-header">
             <div class="logo">
-                <span class="icon">💣</span>
-                <h1>CANNON <span class="highlight">DRAW</span></h1>
+                <span class="icon">🎮</span>
+                <h1>RANDOM <span class="highlight">CHOOSE</span></h1>
             </div>
             <div class="header-controls">
                 <button id="soundToggleBtn" class="control-btn" title="사운드 켜기/끄기">
@@ -27,29 +27,33 @@
             </div>
         </header>
 
-        <!-- 1단계: 준비 화면 -->
-        <section id="stepReady" class="game-card active">
-            <div class="card-header">
-                <h2>🎮 게임 준비하기</h2>
-                <p class="subtitle">참여할 사람들의 이름을 적고 대포를 몇 번 쏠지 결정하세요.</p>
-            </div>
-
+        <!-- 공통: 참여자 등록 (대포/사다리 공통 연동) -->
+        <section id="commonParticipantSection" class="game-card">
             <div class="input-section">
-                <label for="nameInput">참여자 이름 등록</label>
+                <label for="nameInput">👥 참여자 이름 등록</label>
                 <div class="input-group">
                     <input type="text" id="nameInput" placeholder="이름을 입력하세요 (예: 남건)" autocomplete="off" maxlength="10">
                     <button type="button" id="addNameBtn" class="btn btn-primary">추가</button>
                 </div>
-                <p class="input-tip">* 수파베이스에서 자동으로 불러오거나, 직접 추가할 수 있습니다.</p>
+                <p class="input-tip">* 이름은 자동으로 DB에 저장되어 언제든 다시 불러옵니다.</p>
             </div>
 
             <div class="list-section">
-                <h3>👥 등록된 참여자 (<span id="participantCount">0</span>명)</h3>
+                <h3>등록된 참여자 (<span id="participantCount">0</span>명)</h3>
                 <div id="participantList" class="participant-chips">
                     <p class="empty-message">등록된 사람이 없습니다. 이름을 추가해 주세요.</p>
                 </div>
             </div>
+        </section>
 
+        <!-- 게임 모드 선택 탭 버튼 -->
+        <div class="tab-container">
+            <button type="button" id="tabCannonBtn" class="tab-button active">💣 대포 추첨</button>
+            <button type="button" id="tabLadderBtn" class="tab-button">🪜 사다리 타기</button>
+        </div>
+
+        <!-- [대포 게임 설정 구역] -->
+        <section id="cannonSettingsSection" class="game-card tab-content active">
             <div class="settings-section">
                 <div class="setting-item">
                     <div class="setting-info">
@@ -62,11 +66,24 @@
                     </div>
                 </div>
             </div>
-
-            <button type="button" id="startGameBtn" class="btn btn-accent btn-large" disabled>게임 시작하기 🚀</button>
+            <button type="button" id="startGameBtn" class="btn btn-accent btn-large" disabled>대포 게임 시작하기 🚀</button>
         </section>
 
-        <!-- 2단계: 대포 발사 화면 -->
+        <!-- [사다리 게임 설정 구역] -->
+        <section id="ladderSettingsSection" class="game-card tab-content">
+            <div class="card-header">
+                <h2>🎁 사다리 상품/벌칙 등록</h2>
+                <p class="subtitle">참여자 각각 매칭될 상품이나 벌칙을 순서대로 적어주세요.</p>
+            </div>
+            <div class="prize-input-container">
+                <div id="prizeInputsList" class="prize-inputs-grid">
+                    <!-- 참여자 이름에 연동되어 동적으로 생성되는 입력 인풋들 -->
+                </div>
+            </div>
+            <button type="button" id="startLadderGameBtn" class="btn btn-accent btn-large" disabled>사다리 타기 시작! 🪜</button>
+        </section>
+
+        <!-- 2단계: 대포 발사 화면 (기존 구조 보존) -->
         <section id="stepPlay" class="game-stage">
             <div class="stage-header">
                 <div class="stage-info">
@@ -85,7 +102,25 @@
             </div>
         </section>
 
-        <!-- 3단계: 결과 화면 -->
+        <!-- 3단계: 사다리 타기 액션 화면 (새로운 구조) -->
+        <section id="stepLadderPlay" class="game-stage">
+            <div class="stage-header">
+                <div class="stage-info">
+                    <h2>🪜 사다리 타기 스테이지</h2>
+                    <p>누가 어떤 상품에 당첨될까요?</p>
+                </div>
+                <button type="button" id="quitLadderGameBtn" class="btn btn-danger btn-sm">게임 중단</button>
+            </div>
+            <div class="canvas-wrapper">
+                <canvas id="ladderCanvas"></canvas>
+                <div id="ladderCanvasOverlay" class="canvas-overlay"></div>
+            </div>
+            <div class="stage-controls">
+                <button type="button" id="runLadderBtn" class="btn btn-accent btn-large pulse">🪜 사다리 타기 시작!</button>
+            </div>
+        </section>
+
+        <!-- 결과 화면 (대포 결과) -->
         <section id="stepResult" class="game-card">
             <div class="card-header text-center">
                 <div class="trophy-icon">🏆</div>
@@ -97,12 +132,27 @@
             </div>
             <div class="result-actions">
                 <button type="button" id="restartSameBtn" class="btn btn-primary">🔄 번호 섞어 다시 하기</button>
-                <button type="button" id="resetAllBtn" class="btn btn-secondary">🏠 처음으로 (새로 만들기)</button>
+                <button type="button" id="resetAllBtn" class="btn btn-secondary">🏠 처음으로</button>
+            </div>
+        </section>
+
+        <!-- 결과 화면 (사다리 결과) -->
+        <section id="stepLadderResult" class="game-card">
+            <div class="card-header text-center">
+                <div class="trophy-icon">🎁</div>
+                <h2>사다리 타기 결과</h2>
+                <p class="subtitle">최종 매칭된 사다리 결과 목록입니다.</p>
+            </div>
+            <div class="winners-section">
+                <div id="ladderResultList" class="winners-list"></div>
+            </div>
+            <div class="result-actions">
+                <button type="button" id="resetAllLadderBtn" class="btn btn-secondary">🏠 처음으로</button>
             </div>
         </section>
     </div>
 
-    <!-- 당첨 팝업 모달 -->
+    <!-- 당첨 팝업 모달 (기존 구조 보존) -->
     <div id="hitModal" class="modal-overlay">
         <div class="modal-content">
             <div class="modal-badge">🎯 HIT!</div>

@@ -1,7 +1,5 @@
 /* ==========================================
-   Cannon Draw v3.0 - 최종 완성본
-   구조: <body> 최하단 스크립트 → DOM 이미 준비됨
-         DOMContentLoaded 불필요 → 가장 안전한 방식
+   Cannon & Ladder Draw v4.0 - 통합 최종본
    ========================================== */
 
 // =============================================
@@ -11,62 +9,99 @@ const SUPABASE_URL = "https://qzhgsshyhmnczmreagqd.supabase.co";
 const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF6aGdzc2h5aG1uY3ptcmVhZ3FkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIyNzc0NzksImV4cCI6MjA5Nzg1MzQ3OX0.2NZxyClmIpj7WtUuZtexZqAMuTnC7udF5FejwitzvcU";
 
 // =============================================
-// [1] 상태 변수 (순수 데이터)
+// [1] 전역 상태 변수
 // =============================================
 var participants = [];   // { name, number }
-var winners      = [];
-var gameState    = 'READY';
+var winners      = [];   // 대포 게임 당첨자 목록
+var gameState    = 'READY'; // 'READY' | 'PLAYING' | 'GAME_OVER'
+var activeTab    = 'cannon'; // 'cannon' | 'ladder'
 var soundEnabled = true;
 var audioCtx     = null;
-// ⚠️ 필수: 아래 var supabase = null 이 window.supabase를 덮어쓰기 전에
-//    CDN이 심어놈은 수파베이스 SDK를 먼저 저장해두기!
-var _SDK = window.supabase || null;
+var supabase     = null;
 
-var supabase     = null;  // 우리 프로젝트의 DB 클라이언트 변수
+// 대포 모드 전용
 var totalShots   = 1;
 var remainShots  = 0;
-
-// 캔버스 관련
 var cannon = { x:0, y:0, angle:-Math.PI/2, targetAngle:-Math.PI/2,
                length:50, width:20, isRotating:false, baseRadius:35 };
 var targets=[], balls=[], particles=[], confetti=[], aniId=null;
 var currentTarget=null, isShooting=false;
 
+// 사다리 모드 전용
+var ladderPrizes = [];    // 상품 입력값 배열
+var ladderBridges = [];   // 가로 다리 정보
+var ladderPlayers = [];   // 사다리 타고 내려가는 말 상태 { x, y, lineIndex, color, path:[], done:false }
+var ladderResult = [];    // 최종 매칭 { name, prize }
+var ladderColors = ['#ff3366', '#00f2fe', '#ffeb3b', '#a78bfa', '#34d399', '#f59e0b', '#ec4899', '#10b981', '#3b82f6', '#8b5cf6'];
+
 // =============================================
-// [2] DOM 요소 (스크립트가 <body> 맨 아래 → 이미 준비됨)
+// [2] DOM 요소 (<body> 최하단 로드)
 // =============================================
-var stepReady   = document.getElementById('stepReady');
-var stepPlay    = document.getElementById('stepPlay');
-var stepResult  = document.getElementById('stepResult');
+// 공통 요소
 var nameInput   = document.getElementById('nameInput');
 var addNameBtn  = document.getElementById('addNameBtn');
 var partList    = document.getElementById('participantList');
 var partCount   = document.getElementById('participantCount');
+var soundBtn    = document.getElementById('soundToggleBtn');
+var soundIcon   = document.getElementById('soundIcon');
+var soundText   = document.getElementById('soundText');
+
+// 탭 제어
+var tabCannonBtn = document.getElementById('tabCannonBtn');
+var tabLadderBtn = document.getElementById('tabLadderBtn');
+var cannonSettings = document.getElementById('cannonSettingsSection');
+var ladderSettings = document.getElementById('ladderSettingsSection');
+
+// 대포 설정 및 스테이지
 var countInput  = document.getElementById('cannonCountInput');
 var countVal    = document.getElementById('cannonCountVal');
 var startBtn    = document.getElementById('startGameBtn');
+var stepPlay    = document.getElementById('stepPlay');
+var cvs         = document.getElementById('gameCanvas');
+var ctx         = cvs.getContext('2d');
 var shotsEl     = document.getElementById('remainingShots');
 var fireBtn     = document.getElementById('fireCannonBtn');
 var quitBtn     = document.getElementById('quitGameBtn');
 var overlay     = document.getElementById('canvasOverlay');
+
+// 사다리 설정 및 스테이지
+var prizeInputsList = document.getElementById('prizeInputsList');
+var startLadderBtn  = document.getElementById('startLadderGameBtn');
+var stepLadderPlay  = document.getElementById('stepLadderPlay');
+var quitLadderBtn   = document.getElementById('quitLadderGameBtn');
+var runLadderBtn    = document.getElementById('runLadderBtn');
+var ladCvs          = document.getElementById('ladderCanvas');
+var ladCtx          = ladCvs.getContext('2d');
+var ladOverlay      = document.getElementById('ladderCanvasOverlay');
+
+// 결과 화면들
+var stepResult  = document.getElementById('stepResult');
 var winnersList = document.getElementById('winnersList');
 var restartBtn  = document.getElementById('restartSameBtn');
 var resetBtn    = document.getElementById('resetAllBtn');
-var sndBtn      = document.getElementById('soundToggleBtn');
-var sndIcon     = document.getElementById('soundIcon');
-var sndText     = document.getElementById('soundText');
+
+var stepLadderResult = document.getElementById('stepLadderResult');
+var ladderResultList = document.getElementById('ladderResultList');
+var resetAllLadBtn   = document.getElementById('resetAllLadderBtn');
+
+// 모달
 var hitModal    = document.getElementById('hitModal');
 var hitNumEl    = document.getElementById('hitNumber');
 var hitNameEl   = document.getElementById('hitName');
 var closeModal  = document.getElementById('closeModalBtn');
-var cvs         = document.getElementById('gameCanvas');
-var ctx         = cvs.getContext('2d');
 
 // =============================================
-// [3] 이벤트 연결 (DOM 준비됐으니 바로 연결)
+// [3] 이벤트 리스너 등록
 // =============================================
 addNameBtn.addEventListener('click', handleAdd);
 nameInput.addEventListener('keydown', function(e){ if(e.key==='Enter') handleAdd(); });
+soundBtn.addEventListener('click', toggleSound);
+
+// 탭 스위칭
+tabCannonBtn.addEventListener('click', function(){ switchTab('cannon'); });
+tabLadderBtn.addEventListener('click', function(){ switchTab('ladder'); });
+
+// 대포 이벤트
 countInput.addEventListener('input', function(){ totalShots=+countInput.value; countVal.textContent=totalShots+'회'; });
 startBtn.addEventListener('click', startGame);
 quitBtn.addEventListener('click', quitGame);
@@ -74,26 +109,71 @@ fireBtn.addEventListener('click', fireCannon);
 closeModal.addEventListener('click', onCloseModal);
 restartBtn.addEventListener('click', restartSame);
 resetBtn.addEventListener('click', resetAll);
-sndBtn.addEventListener('click', toggleSound);
+
+// 사다리 이벤트
+startLadderBtn.addEventListener('click', startLadderGame);
+quitLadderBtn.addEventListener('click', quitLadderGame);
+runLadderBtn.addEventListener('click', runLadderSimulation);
+resetAllLadBtn.addEventListener('click', resetAllLadder);
 
 // =============================================
-// [4] 캔버스 초기 크기 설정
+// [4] 탭 스위칭 로직
 // =============================================
-function resizeCanvas(){
-    if(!cvs||!cvs.parentNode) return;
-    var r = cvs.parentNode.getBoundingClientRect();
-    cvs.width  = r.width  || 600;
-    cvs.height = r.height || 400;
-    cannon.x = cvs.width/2;
-    cannon.y = cvs.height - 35;
-    if(gameState==='PLAYING') arrangeTargets();
+function switchTab(tab) {
+    activeTab = tab;
+    if (tab === 'cannon') {
+        tabCannonBtn.classList.add('active');
+        tabLadderBtn.classList.remove('active');
+        cannonSettings.classList.add('active');
+        ladderSettings.classList.remove('active');
+    } else {
+        tabCannonBtn.classList.remove('active');
+        tabLadderBtn.classList.add('active');
+        cannonSettings.classList.remove('active');
+        ladderSettings.classList.add('active');
+        updatePrizeInputs();
+    }
 }
-resizeCanvas();
-window.addEventListener('resize', resizeCanvas);
+
+// 사다리 상품 입력 폼 동적 업데이트
+function updatePrizeInputs() {
+    prizeInputsList.innerHTML = '';
+    participants.forEach(function(p, i) {
+        var savedVal = ladderPrizes[i] || ''; // 기존에 적어둔 상품명 있으면 기억
+        var row = document.createElement('div');
+        row.className = 'prize-input-row';
+        row.innerHTML = '<span class="prize-label">' + esc(p.name) + '</span>' +
+                        '<input type="text" class="prize-field" placeholder="당첨될 상품/벌칙 입력" data-index="' + i + '" value="' + esc(savedVal) + '">';
+        
+        // 입력 이벤트 걸어서 즉시 배열에 동기화
+        var input = row.querySelector('input');
+        input.addEventListener('input', function(e) {
+            var idx = +e.target.getAttribute('data-index');
+            ladderPrizes[idx] = e.target.value.trim();
+            checkLadderStartValidation();
+        });
+        prizeInputsList.appendChild(row);
+    });
+    checkLadderStartValidation();
+}
+
+function checkLadderStartValidation() {
+    var count = participants.length;
+    // 사다리는 최소 2명 이상일 때 작동
+    if (count >= 2) {
+        startLadderBtn.disabled = false;
+    } else {
+        startLadderBtn.disabled = true;
+    }
+}
 
 // =============================================
-// [5] UI 갱신
+// [5] UI 갱신 및 DB 연동
 // =============================================
+// ⚠️ 필수: 아래 var supabase = null 이 window.supabase를 덮어쓰기 전에
+//    CDN이 심어놈은 수파베이스 SDK를 먼저 저장해두기!
+var _SDK = window.supabase || null;
+
 function updateUI(){
     var n = participants.length;
     partCount.textContent = n;
@@ -107,17 +187,23 @@ function updateUI(){
                    '<button type="button" onclick="removePart(\''+esc(p.name)+'\')">×</button></span>';
         }).join('');
     }
+    
+    // 대포 설정 조율
     countInput.disabled = (n===0);
     countInput.max = n||1;
     if(+countInput.value > n){ countInput.value=n||1; totalShots=n||1; }
     countVal.textContent = totalShots+'회';
     startBtn.disabled = (n===0);
+
+    // 사다리 설정 조율
+    if (activeTab === 'ladder') {
+        updatePrizeInputs();
+    } else {
+        checkLadderStartValidation();
+    }
 }
 updateUI();
 
-// =============================================
-// [6] 참여자 추가 / 삭제
-// =============================================
 function handleAdd(){
     var name = nameInput.value.trim();
     if(!name){ alert('이름을 입력해 주세요!'); nameInput.focus(); return; }
@@ -129,18 +215,19 @@ function handleAdd(){
     nameInput.focus();
     shuffle();
     updateUI();
-    saveToDb(name); // 수파베이스에 백그라운드 저장
+    saveToDb(name);
 }
 
 window.removePart = function(name){
-    participants = participants.filter(function(p){ return p.name!==name; });
+    var idx = participants.findIndex(function(p){ return p.name===name; });
+    if(idx !== -1) {
+        participants.splice(idx, 1);
+        ladderPrizes.splice(idx, 1); // 상품도 같이 지움
+    }
     shuffle();
     updateUI();
 };
 
-// =============================================
-// [7] 번호 무작위 배정 (Fisher-Yates)
-// =============================================
 function shuffle(){
     var n=participants.length; if(!n) return;
     var arr=[];for(var i=1;i<=n;i++) arr.push(i);
@@ -152,18 +239,15 @@ function shuffle(){
 }
 
 // =============================================
-// [8] 수파베이스 연결 & 데이터
+// [6] 수파베이스 연동
 // =============================================
 (function initDb(){
     try {
-        // 1) 비교적 새로운 방식으로 심어나는 수파베이스 v2 SDK는 window.supabase.createClient
-        // 2) 우리가 앞에 _SDK로 미리 저장해두었으니 그걸 사용
         var sdk = _SDK || window.supabase || null;
         var mk  = (typeof createClient !== 'undefined') ? createClient
                : (sdk && sdk.createClient ? sdk.createClient : null);
         if(!mk){ console.warn('수파베이스 SDK 미로드 - 로칼 모드로 작동'); return; }
         supabase = mk(SUPABASE_URL, SUPABASE_KEY);
-        console.log('수파베이스 연결 성공!');
         loadFromDb();
     } catch(e){ console.error('수파베이스 초기화 오류:', e.message); }
 })();
@@ -193,13 +277,24 @@ function saveToDb(name){
 }
 
 // =============================================
-// [9] 게임 진행
+// [7] 대포 게임 플레이 코드
 // =============================================
+function resizeCanvas(){
+    if(!cvs||!cvs.parentNode) return;
+    var r = cvs.parentNode.getBoundingClientRect();
+    cvs.width  = r.width  || 600;
+    cvs.height = r.height || 400;
+    cannon.x = cvs.width/2;
+    cannon.y = cvs.height - 35;
+    if(gameState==='PLAYING' && activeTab === 'cannon') arrangeTargets();
+}
+window.addEventListener('resize', resizeCanvas);
+
 function startGame(){
     initAudio();
     gameState='PLAYING'; winners=[]; remainShots=totalShots;
     shotsEl.textContent=remainShots;
-    stepReady.classList.remove('active');
+    stepReady.style.display='none';
     stepResult.classList.remove('active');
     stepPlay.classList.add('active');
     fireBtn.disabled=false; overlay.style.display='none';
@@ -214,14 +309,13 @@ function quitGame(){
     balls=[]; particles=[]; confetti=[]; targets=[];
     stepPlay.classList.remove('active');
     stepResult.classList.remove('active');
-    stepReady.classList.add('active');
+    stepReady.style.display='flex';
 }
 
 function endGame(){
     gameState='GAME_OVER';
     if(aniId){ cancelAnimationFrame(aniId); aniId=null; }
     stepPlay.classList.remove('active');
-    stepReady.classList.remove('active');
     stepResult.classList.add('active');
     winnersList.innerHTML=winners.map(function(w,i){
         return '<div class="winner-card"><div class="winner-rank">'+(i+1)+'위</div>'+
@@ -245,7 +339,7 @@ function restartSame(){
     shuffle();
     stepResult.classList.remove('active');
     stepPlay.classList.remove('active');
-    stepReady.classList.add('active');
+    stepReady.style.display='flex';
     updateUI(); loadFromDb();
 }
 
@@ -256,19 +350,16 @@ function resetAll(){
     nameInput.value=''; countInput.value=1; totalShots=1; countVal.textContent='1회';
     stepPlay.classList.remove('active');
     stepResult.classList.remove('active');
-    stepReady.classList.add('active');
+    stepReady.style.display='flex';
     updateUI(); loadFromDb();
 }
 
 function toggleSound(){
     soundEnabled=!soundEnabled;
-    sndIcon.textContent=soundEnabled?'🔊':'🔇';
-    sndText.textContent=soundEnabled?'소리 켬':'소리 끔';
+    soundIcon.textContent=soundEnabled?'🔊':'🔇';
+    soundText.textContent=soundEnabled?'소리 켬':'소리 끔';
 }
 
-// =============================================
-// [10] 캔버스 & 애니메이션
-// =============================================
 function arrangeTargets(){
     targets=[];
     var rem=participants.filter(function(p){ return !winners.some(function(w){ return w.name===p.name; }); });
@@ -305,16 +396,6 @@ function doFire(tgt){
 function loop(){
     aniId=requestAnimationFrame(loop);
     update(); draw();
-}
-
-function confettiLoop(){
-    ctx.clearRect(0,0,cvs.width,cvs.height);
-    confetti=confetti.filter(function(c){
-        c.x+=c.vx; c.y+=c.vy; c.vy+=0.05; c.rotation+=c.spin; c.life-=0.003;
-        return c.life>0&&c.y<cvs.height+20;
-    });
-    confetti.forEach(drawC);
-    if(confetti.length>0) aniId=requestAnimationFrame(confettiLoop);
 }
 
 function update(){
@@ -417,8 +498,341 @@ function spawnConfetti(){
     }
 }
 
+function confettiLoop(){
+    ctx.clearRect(0,0,cvs.width,cvs.height);
+    confetti=confetti.filter(function(c){
+        c.x+=c.vx; c.y+=c.vy; c.vy+=0.05; c.rotation+=c.spin; c.life-=0.003;
+        return c.life>0&&c.y<cvs.height+20;
+    });
+    confetti.forEach(drawC);
+    if(confetti.length>0) aniId=requestAnimationFrame(confettiLoop);
+}
+
 // =============================================
-// [11] 사운드 (Web Audio API)
+// [8] 사더리 게임 플레이 코드
+// =============================================
+var ladderActive = false;
+
+function resizeLadderCanvas() {
+    if(!ladCvs || !ladCvs.parentNode) return;
+    var r = ladCvs.parentNode.getBoundingClientRect();
+    ladCvs.width = r.width || 600;
+    ladCvs.height = r.height || 450;
+}
+window.addEventListener('resize', resizeLadderCanvas);
+
+function startLadderGame() {
+    initAudio();
+    gameState = 'PLAYING';
+    
+    // UI 전환
+    document.getElementById('commonParticipantSection').style.display = 'none';
+    document.querySelector('.tab-container').style.display = 'none';
+    ladderSettings.classList.remove('active');
+    stepLadderPlay.classList.add('active');
+
+    runLadderBtn.disabled = false;
+    ladOverlay.style.display = 'none';
+
+    resizeLadderCanvas();
+    
+    // 사다리 다리 데이터 구축
+    generateLadderStructure();
+    
+    // 사다리 그리기
+    drawLadderInitial();
+}
+
+function quitLadderGame() {
+    gameState = 'READY';
+    ladderActive = false;
+    document.getElementById('commonParticipantSection').style.display = 'flex';
+    document.querySelector('.tab-container').style.display = 'flex';
+    stepLadderPlay.classList.remove('active');
+    ladderSettings.classList.add('active');
+    
+    updateUI();
+}
+
+function generateLadderStructure() {
+    var count = participants.length;
+    ladderBridges = [];
+    ladderPlayers = [];
+    ladderResult = [];
+
+    // 기둥 수 = 참여자 수
+    var w = ladCvs.width;
+    var h = ladCvs.height;
+    
+    // 좌우 여백을 주어 중앙에 정렬
+    var padding = 50;
+    var colWidth = (w - (padding * 2)) / (count - 1);
+
+    // 가로 다리들을 랜덤하게 생성 (총 다리 수는 인원에 비례)
+    var bridgeCount = count * 3;
+    var levels = 15; // 다리가 배치될 수 있는 등분선
+    
+    for (var i = 0; i < bridgeCount; i++) {
+        var startLine = Math.floor(Math.random() * (count - 1));
+        var level = Math.floor(Math.random() * (levels - 2)) + 1; // 0과 끝 레벨은 제외
+
+        // 이미 같은 라인, 같은 레벨에 다리가 놓였는지 체크
+        var exists = ladderBridges.some(function(b) {
+            return b.startLine === startLine && b.level === level;
+        });
+
+        // 인접한 라인과 한 번에 다리 겹치지 않게 (서로 이어져 3개가 되는 것 방지)
+        var neighbor = ladderBridges.some(function(b) {
+            return (b.startLine === startLine - 1 || b.startLine === startLine + 1) && b.level === level;
+        });
+
+        if (!exists && !neighbor) {
+            ladderBridges.push({
+                startLine: startLine,
+                level: level
+            });
+        }
+    }
+
+    // 다리들을 높이별로 정렬
+    ladderBridges.sort(function(a, b) { return a.level - b.level; });
+
+    // 각 라인별 플레이어 위치 초기화
+    var topY = 60; // 이름이 그려지는 밑단 Y값
+    participants.forEach(function(p, i) {
+        var startX = padding + (i * colWidth);
+        ladderPlayers.push({
+            name: p.name,
+            color: ladderColors[i % ladderColors.length],
+            x: startX,
+            y: topY,
+            lineIndex: i,
+            done: false,
+            path: [{x: startX, y: topY}]
+        });
+    });
+}
+
+function drawLadderInitial() {
+    var w = ladCvs.width;
+    var h = ladCvs.height;
+    var count = participants.length;
+    var padding = 50;
+    var colWidth = (w - (padding * 2)) / (count - 1);
+    
+    var topY = 60;
+    var bottomY = h - 60;
+
+    ladCtx.clearRect(0, 0, w, h);
+    
+    // 배경
+    ladCtx.fillStyle = '#0e1022';
+    ladCtx.fillRect(0, 0, w, h);
+
+    // 사다리 세로선 그리기
+    ladCtx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
+    ladCtx.lineWidth = 4;
+    for (var i = 0; i < count; i++) {
+        var x = padding + (i * colWidth);
+        ladCtx.beginPath();
+        ladCtx.moveTo(x, topY);
+        ladCtx.lineTo(x, bottomY);
+        ladCtx.stroke();
+
+        // 위에 이름 배치
+        ladCtx.fillStyle = '#fff';
+        ladCtx.font = 'bold 13px Noto Sans KR';
+        ladCtx.textAlign = 'center';
+        ladCtx.fillText(participants[i].name, x, topY - 20);
+
+        // 아래에 입력한 상품 배치
+        var prizeText = ladderPrizes[i] || '꽝';
+        ladCtx.fillStyle = 'rgba(0, 242, 254, 0.9)';
+        ladCtx.font = 'bold 13px Noto Sans KR';
+        ladCtx.fillText(prizeText, x, bottomY + 25);
+    }
+
+    // 사다리 가로 다리 그리기
+    ladCtx.strokeStyle = 'rgba(255, 255, 255, 0.35)';
+    ladCtx.lineWidth = 3;
+    var stepH = (bottomY - topY) / 15;
+    ladderBridges.forEach(function(b) {
+        var x1 = padding + (b.startLine * colWidth);
+        var x2 = padding + ((b.startLine + 1) * colWidth);
+        var y = topY + (b.level * stepH);
+
+        ladCtx.beginPath();
+        ladCtx.moveTo(x1, y);
+        ladCtx.lineTo(x2, y);
+        ladCtx.stroke();
+    });
+}
+
+function runLadderSimulation() {
+    runLadderBtn.disabled = true;
+    ladOverlay.style.display = 'block';
+    ladderActive = true;
+
+    // 사다리 타기 로직 시뮬레이션 돌려놓기 (애니메이션에서 순서대로 이동하기 위함)
+    var w = ladCvs.width;
+    var h = ladCvs.height;
+    var count = participants.length;
+    var padding = 50;
+    var colWidth = (w - (padding * 2)) / (count - 1);
+    var topY = 60;
+    var bottomY = h - 60;
+    var stepH = (bottomY - topY) / 15;
+
+    // 각 라인별 현재 Y 위치
+    var curY = topY;
+    
+    // 사다리 진행 루프
+    var stepSize = 3; // 스텝당 하강할 프레임 수
+    var animFrame = 0;
+
+    function animLoop() {
+        if (!ladderActive) return;
+
+        var allDone = true;
+        ladCtx.clearRect(0, 0, w, h);
+        
+        // 사다리 구조 다시 그리기
+        drawLadderInitial();
+
+        // 플레이어별 선 따라 내려가기 렌더링
+        ladderPlayers.forEach(function(p, pIdx) {
+            // 경로 그리기
+            ladCtx.strokeStyle = p.color;
+            ladCtx.lineWidth = 4;
+            ladCtx.beginPath();
+            ladCtx.moveTo(p.path[0].x, p.path[0].y);
+            for (var k = 1; k < p.path.length; k++) {
+                ladCtx.lineTo(p.path[k].x, p.path[k].y);
+            }
+            // 현재 위치 그리기
+            var lastPt = p.path[p.path.length - 1];
+            ladCtx.stroke();
+
+            // 점 그리기 (플레이어 헤드)
+            ladCtx.fillStyle = '#fff';
+            ladCtx.beginPath();
+            ladCtx.arc(lastPt.x, lastPt.y, 6, 0, Math.PI*2);
+            ladCtx.fill();
+            ladCtx.strokeStyle = p.color;
+            ladCtx.lineWidth = 2;
+            ladCtx.stroke();
+
+            if (!p.done) {
+                allDone = false;
+
+                // 하강 로직
+                var newY = lastPt.y + stepSize;
+                
+                // 이번 스텝에서 다리를 마주쳤는지 체크
+                var crossedBridge = null;
+                var currentLevel = Math.round((lastPt.y - topY) / stepH);
+
+                // 현재 Y값 근처에 있는 다리가 있는지 체크
+                ladderBridges.forEach(function(b) {
+                    var bY = topY + (b.level * stepH);
+                    // 현재 점의 Y가 다리의 Y 위치를 통과할 때
+                    if (lastPt.y < bY && newY >= bY) {
+                        if (p.lineIndex === b.startLine) {
+                            crossedBridge = { bridge: b, direction: 1 }; // 오른쪽으로 이동
+                        } else if (p.lineIndex === b.startLine + 1) {
+                            crossedBridge = { bridge: b, direction: -1 }; // 왼쪽으로 이동
+                        }
+                    }
+                });
+
+                if (crossedBridge) {
+                    // 다리가 위치한 Y 높이로 보정
+                    var bY = topY + (crossedBridge.bridge.level * stepH);
+                    p.path.push({ x: lastPt.x, y: bY });
+
+                    // 옆 라인 X로 수평 이동 추가
+                    p.lineIndex += crossedBridge.direction;
+                    var nextX = padding + (p.lineIndex * colWidth);
+                    p.path.push({ x: nextX, y: bY });
+
+                    playShoot(); // 옆으로 꺾일 때 틱 소리
+                } else {
+                    // 그냥 아래로 전진
+                    if (newY >= bottomY) {
+                        p.path.push({ x: lastPt.x, y: bottomY });
+                        p.done = true;
+                        
+                        // 결과 저장 (이 세로선 인덱스 하단에 적힌 상품)
+                        var resultPrize = ladderPrizes[p.lineIndex] || '꽝';
+                        ladderResult.push({
+                            name: p.name,
+                            prize: resultPrize
+                        });
+                        playHit(); // 당첨 효과음
+                    } else {
+                        p.path.push({ x: lastPt.x, y: newY });
+                    }
+                }
+            }
+        });
+
+        if (allDone) {
+            ladderActive = false;
+            setTimeout(showLadderResult, 1000);
+        } else {
+            requestAnimationFrame(animLoop);
+        }
+    }
+
+    requestAnimationFrame(animLoop);
+}
+
+function showLadderResult() {
+    // 결과 화면 노출
+    stepLadderPlay.classList.remove('active');
+    stepLadderResult.classList.add('active');
+
+    // 결과 데이터 노출
+    ladderResultList.innerHTML = ladderResult.map(function(r) {
+        return '<div class="winner-card"><div class="winner-rank">결과</div>'+
+               '<div class="winner-name" style="margin-left: 20px;">' + esc(r.name) + '</div>'+
+               '<div class="winner-number" style="margin-left: auto; width: auto; padding: 5px 15px; border-radius: 8px; font-size: 0.95rem;">' + esc(r.prize) + '</div></div>';
+    }).join('');
+
+    spawnConfetti();
+    if (aniId) cancelAnimationFrame(aniId);
+    aniId = requestAnimationFrame(confettiLoopLadder);
+}
+
+function confettiLoopLadder(){
+    ladCtx.clearRect(0,0,ladCvs.width,ladCvs.height);
+    confetti=confetti.filter(function(c){
+        c.x+=c.vx; c.y+=c.vy; c.vy+=0.05; c.rotation+=c.spin; c.life-=0.003;
+        return c.life>0&&c.y<ladCvs.height+20;
+    });
+    // 꽃가루 배경 렌더
+    confetti.forEach(function(c) {
+        ladCtx.save(); ladCtx.globalAlpha=c.life; ladCtx.translate(c.x,c.y); ladCtx.rotate(c.rotation);
+        ladCtx.fillStyle=c.color; ladCtx.fillRect(-c.sz/2,-c.sz/2,c.sz,c.sz*0.5); ladCtx.restore();
+    });
+    if(confetti.length>0) aniId=requestAnimationFrame(confettiLoopLadder);
+}
+
+function resetAllLadder() {
+    stepLadderResult.classList.remove('active');
+    document.getElementById('commonParticipantSection').style.display = 'flex';
+    document.querySelector('.tab-container').style.display = 'flex';
+    
+    // 첫 준비 화면으로 초기화
+    if(aniId){ cancelAnimationFrame(aniId); aniId=null; }
+    balls=[]; particles=[]; confetti=[]; targets=[];
+    
+    // 첫 화면
+    switchTab('ladder');
+}
+
+// =============================================
+// [9] Web Audio API 사운드 및 유틸
 // =============================================
 function initAudio(){
     if(!audioCtx) audioCtx=new(window.AudioContext||window.webkitAudioContext)();
@@ -444,9 +858,6 @@ function playHit(){
     });
 }
 
-// =============================================
-// [12] 유틸
-// =============================================
 function esc(s){
     return String(s).replace(/[&<>'"]/g,function(c){
         return({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]||c);

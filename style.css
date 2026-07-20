@@ -923,3 +923,112 @@ body {
         padding: 8px 12px;
     }
 }
+
+/* ==========================================
+   탭 내비게이션 & 사다리 게임 전용 스타일 추가
+   ========================================== */
+
+/* 탭 바 */
+.tab-container {
+    display: flex;
+    gap: 10px;
+    background: rgba(255, 255, 255, 0.02);
+    padding: 6px;
+    border-radius: 14px;
+    border: 1px solid var(--card-border);
+}
+
+.tab-button {
+    flex: 1;
+    background: transparent;
+    border: none;
+    padding: 12px;
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--text-secondary);
+    cursor: pointer;
+    border-radius: 10px;
+    transition: var(--transition);
+}
+
+.tab-button:hover {
+    color: var(--text-primary);
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.tab-button.active {
+    color: #fff;
+    background: linear-gradient(135deg, rgba(79, 172, 254, 0.2), rgba(0, 242, 254, 0.2));
+    border: 1px solid rgba(0, 242, 254, 0.4);
+    box-shadow: 0 0 15px rgba(0, 242, 254, 0.15);
+}
+
+/* 탭 컨텐츠 제어 */
+.tab-content {
+    display: none !important;
+}
+
+.tab-content.active {
+    display: flex !important;
+}
+
+/* 사다리 상품 입력 목록 */
+.prize-input-container {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 16px;
+    padding: 20px;
+    max-height: 350px;
+    overflow-y: auto;
+    border: 1px solid var(--card-border);
+}
+
+.prize-inputs-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.prize-input-row {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    background: rgba(255, 255, 255, 0.02);
+    padding: 10px 15px;
+    border-radius: 10px;
+    border: 1px solid rgba(255,255,255,0.03);
+}
+
+.prize-label {
+    min-width: 80px;
+    font-weight: 700;
+    color: var(--color-success);
+    font-size: 0.95rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.prize-field {
+    flex: 1;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--card-border);
+    padding: 8px 12px;
+    border-radius: 8px;
+    color: #fff;
+    font-size: 0.95rem;
+    transition: var(--transition);
+}
+
+.prize-field:focus {
+    outline: none;
+    border-color: var(--color-success);
+    box-shadow: 0 0 10px rgba(0, 242, 254, 0.2);
+}
+
+/* 결과창 공통 보정 */
+#stepLadderResult .winners-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
