@@ -19,7 +19,7 @@ let supabaseUrl = '';
 let supabaseKey = '';
 
 // ==========================================
-// ⚠️ [기본 Supabase 설정] 항상 연동되도록 여기에 적어둡니다!
+// ⚠️ [기본 Supabase 설정] 항상 연동되도록 여기에 적어둡니다! (v1.3)
 // ==========================================
 const DEFAULT_SUPABASE_URL = "https://qzhgsshyhmnczmreagqd.supabase.co"; 
 const DEFAULT_SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF6aGdzc2h5aG1uY3ptcmVhZ3FkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIyNzc0NzksImV4cCI6MjA5Nzg1MzQ3OX0.2NZxyClmIpj7WtUuZtexZqAMuTnC7udF5FejwitzvcU";
