@@ -48,6 +48,7 @@ let isShooting = false;
 //     모든 document.getElementById() 는 여기서만!
 // =============================================
 document.addEventListener('DOMContentLoaded', async () => {
+  try {
 
     // --- DOM 요소 가져오기 (DOMContentLoaded 내부라 항상 안전) ---
     const stepReady   = document.getElementById('stepReady');
@@ -782,4 +783,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
+  } catch (err) {
+    // 초기화 중 오류 발생 시 사용자에게 알림
+    alert('앱 초기화 오류: ' + err.message + '\n\n개발자 콘솔(F12)에서 자세한 내용을 확인하세요.');
+    console.error('초기화 오류:', err);
+  }
 }); // DOMContentLoaded 종료
