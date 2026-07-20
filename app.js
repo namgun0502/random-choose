@@ -18,7 +18,11 @@ var winners      = [];
 var gameState    = 'READY';
 var soundEnabled = true;
 var audioCtx     = null;
-var supabase     = null;
+// ⚠️ 필수: 아래 var supabase = null 이 window.supabase를 덮어쓰기 전에
+//    CDN이 심어놈은 수파베이스 SDK를 먼저 저장해두기!
+var _SDK = window.supabase || null;
+
+var supabase     = null;  // 우리 프로젝트의 DB 클라이언트 변수
 var totalShots   = 1;
 var remainShots  = 0;
 
@@ -152,10 +156,14 @@ function shuffle(){
 // =============================================
 (function initDb(){
     try {
-        var mk = (typeof createClient!=='undefined') ? createClient
-               : (window.supabase&&window.supabase.createClient ? window.supabase.createClient : null);
-        if(!mk){ console.warn('수파베이스 SDK 미로드'); return; }
+        // 1) 비교적 새로운 방식으로 심어나는 수파베이스 v2 SDK는 window.supabase.createClient
+        // 2) 우리가 앞에 _SDK로 미리 저장해두었으니 그걸 사용
+        var sdk = _SDK || window.supabase || null;
+        var mk  = (typeof createClient !== 'undefined') ? createClient
+               : (sdk && sdk.createClient ? sdk.createClient : null);
+        if(!mk){ console.warn('수파베이스 SDK 미로드 - 로칼 모드로 작동'); return; }
         supabase = mk(SUPABASE_URL, SUPABASE_KEY);
+        console.log('수파베이스 연결 성공!');
         loadFromDb();
     } catch(e){ console.error('수파베이스 초기화 오류:', e.message); }
 })();
