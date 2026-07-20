@@ -294,7 +294,12 @@ function startGame(){
     initAudio();
     gameState='PLAYING'; winners=[]; remainShots=totalShots;
     shotsEl.textContent=remainShots;
-    stepReady.style.display='none';
+    
+    // 기존 stepReady 대신 공통 세션 및 탭 숨김 처리
+    document.getElementById('commonParticipantSection').style.display = 'none';
+    document.querySelector('.tab-container').style.display = 'none';
+    cannonSettings.classList.remove('active');
+
     stepResult.classList.remove('active');
     stepPlay.classList.add('active');
     fireBtn.disabled=false; overlay.style.display='none';
@@ -309,7 +314,11 @@ function quitGame(){
     balls=[]; particles=[]; confetti=[]; targets=[];
     stepPlay.classList.remove('active');
     stepResult.classList.remove('active');
-    stepReady.style.display='flex';
+    
+    // 다시 공통 영역 복구
+    document.getElementById('commonParticipantSection').style.display = 'flex';
+    document.querySelector('.tab-container').style.display = 'flex';
+    cannonSettings.classList.add('active');
 }
 
 function endGame(){
@@ -339,7 +348,11 @@ function restartSame(){
     shuffle();
     stepResult.classList.remove('active');
     stepPlay.classList.remove('active');
-    stepReady.style.display='flex';
+    
+    document.getElementById('commonParticipantSection').style.display = 'flex';
+    document.querySelector('.tab-container').style.display = 'flex';
+    cannonSettings.classList.add('active');
+    
     updateUI(); loadFromDb();
 }
 
