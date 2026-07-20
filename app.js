@@ -705,7 +705,7 @@ function drawLadderInitial() {
     });
 }
 
-// 💡 캔버스에서 사람이름 클릭 시 개별 타기 이벤트 처리기 추가
+// 💡 캔버스에서 사람이름 클릭 시 개별 타기 이벤트 처리기
 ladCvs.addEventListener('click', function(e) {
     if (gameState !== 'PLAYING' || activeTab !== 'ladder') return;
     
@@ -722,17 +722,17 @@ ladCvs.addEventListener('click', function(e) {
     if (mouseY >= topY - 45 && mouseY <= topY + 5) {
         for (var i = 0; i < count; i++) {
             var lineX = padding + (i * colWidth);
-            // 클릭 가로 폭 편차 +-30px 허용
+            // 클릭 가로 폭 편차 +-35px 허용
             if (mouseX >= lineX - 35 && mouseX <= lineX + 35) {
                 var p = ladderPlayers[i];
                 if (p && !p.done && !p.isMoving) {
                     p.isMoving = true;
                     playShoot(); // 출발음 효과
                     
-                    // 만약 시뮬레이션 루프가 아직 돌고 있지 않다면 루프 기동
+                    // 💡 개별 출발 시에는 투명 방어막(ladOverlay)을 켜지 않음!
+                    // 다른 사람의 이름도 여전히 눌러서 동시 출발할 수 있게 개방해둡니다.
                     if (!ladderActive) {
                         ladderActive = true;
-                        ladOverlay.style.display = 'block';
                         runLadderBtn.disabled = true;
                         animLoop();
                     }
@@ -745,6 +745,7 @@ ladCvs.addEventListener('click', function(e) {
 
 function runLadderSimulation() {
     runLadderBtn.disabled = true;
+    // 💡 전체 출발 시에는 마우스 클릭 혼선 방지를 위해 방어막 노출
     ladOverlay.style.display = 'block';
     ladderActive = true;
 
@@ -768,8 +769,10 @@ function animLoop() {
     var bottomY = h - 60;
     var stepH = (bottomY - topY) / 25;
 
-    // 💡 [속도 조절] stepSize를 4 -> 2로 낮추어 슬로우 연출
+    // 💡 세로로 기어 내려가는 속도 (2px)
     var stepSize = 2; 
+    // 💡 가로 다리를 건너가는 속도 (2px)
+    var horizStep = 2; 
 
     var allDone = true;
     ladCtx.clearRect(0, 0, w, h);
@@ -779,7 +782,7 @@ function animLoop() {
     ladderPlayers.forEach(function(p, pIdx) {
         ladCtx.save();
         
-        // 궤적
+        // 지나온 궤적 그리기 (네온 발광 효과)
         ladCtx.strokeStyle = p.color;
         ladCtx.lineWidth = 5;
         ladCtx.shadowColor = p.color;
@@ -796,7 +799,7 @@ function animLoop() {
         
         var lastPt = p.path[p.path.length - 1];
 
-        // 헤드 볼
+        // 플레이어 머리 (화이트 글로우)
         ladCtx.fillStyle = '#ffffff';
         ladCtx.shadowColor = '#ffffff';
         ladCtx.shadowBlur = 15;
@@ -806,60 +809,83 @@ function animLoop() {
         
         ladCtx.restore();
 
-        // 💡 주행 중 상태 관리
+        // 주행 물리 업데이트
         if (p.isMoving && !p.done) {
             allDone = false;
-            var newY = lastPt.y + stepSize;
-            var crossedBridge = null;
-
-            ladderBridges.forEach(function(b) {
-                var bY = topY + (b.level * stepH);
-                if (lastPt.y < bY && newY >= bY) {
-                    if (p.lineIndex === b.startLine) {
-                        crossedBridge = { bridge: b, direction: 1 };
-                    } else if (p.lineIndex === b.startLine + 1) {
-                        crossedBridge = { bridge: b, direction: -1 };
-                    }
-                }
-            });
-
-            if (crossedBridge) {
-                var bY = topY + (crossedBridge.bridge.level * stepH);
-                p.path.push({ x: lastPt.x, y: bY });
-
-                p.lineIndex += crossedBridge.direction;
-                var nextX = padding + (p.lineIndex * colWidth);
-                p.path.push({ x: nextX, y: bY });
-
-                playShoot();
-            } else {
-                if (newY >= bottomY) {
-                    p.path.push({ x: lastPt.x, y: bottomY });
-                    p.done = true;
-                    
-                    var resultPrize = ladderPrizes[p.lineIndex] || '꽝';
-                    ladderResult.push({
-                        name: p.name,
-                        prize: resultPrize
-                    });
-                    playHit();
+            
+            // 💡 [가로로 타는 속도도 스무스하게 조정]
+            if (p.isMovingHorizontal) {
+                var dx = p.horizontalDestX - lastPt.x;
+                var dist = Math.abs(dx);
+                
+                if (dist <= horizStep) {
+                    // 가로 목표 지점에 거의 도달했으면 위치 확정하고 가로 모드 해제
+                    p.path.push({ x: p.horizontalDestX, y: lastPt.y });
+                    p.isMovingHorizontal = false;
                 } else {
-                    p.path.push({ x: lastPt.x, y: newY });
+                    // 목표 X좌표를 향해 프레임당 2픽셀씩 스무스하게 이동
+                    var nextStepX = lastPt.x + Math.sign(dx) * horizStep;
+                    p.path.push({ x: nextStepX, y: lastPt.y });
+                }
+            } else {
+                // 일반 세로 하강 모드
+                var newY = lastPt.y + stepSize;
+                var crossedBridge = null;
+
+                ladderBridges.forEach(function(b) {
+                    var bY = topY + (b.level * stepH);
+                    if (lastPt.y < bY && newY >= bY) {
+                        if (p.lineIndex === b.startLine) {
+                            crossedBridge = { bridge: b, direction: 1 };
+                        } else if (p.lineIndex === b.startLine + 1) {
+                            crossedBridge = { bridge: b, direction: -1 };
+                        }
+                    }
+                });
+
+                if (crossedBridge) {
+                    var bY = topY + (crossedBridge.bridge.level * stepH);
+                    p.path.push({ x: lastPt.x, y: bY });
+
+                    // 가로 이동 목표 설정 및 모드 온
+                    p.lineIndex += crossedBridge.direction;
+                    var nextX = padding + (p.lineIndex * colWidth);
+                    p.isMovingHorizontal = true;
+                    p.horizontalDestX = nextX;
+
+                    playShoot(); // 꺾일 때 소리
+                } else {
+                    if (newY >= bottomY) {
+                        p.path.push({ x: lastPt.x, y: bottomY });
+                        p.done = true;
+                        
+                        var resultPrize = ladderPrizes[p.lineIndex] || '꽝';
+                        ladderResult.push({
+                            name: p.name,
+                            prize: resultPrize
+                        });
+                        playHit();
+                    } else {
+                        p.path.push({ x: lastPt.x, y: newY });
+                    }
                 }
             }
         } else if (!p.done) {
-            // 아직 출발하지 않고 상단 대기 중인 사람이 있다면 완료가 아님
+            // 대기 중인 인원이 한 명이라도 있으면 아직 완료 안 됨
             allDone = false;
         }
     });
 
     if (allDone) {
         ladderActive = false;
+        // 최종 종료 시 방어막과 오프닝 결과 화면 준비
+        ladOverlay.style.display = 'block';
         setTimeout(showLadderResult, 1200);
     } else {
         requestAnimationFrame(animLoop);
     }
 }
+
 
 
 
