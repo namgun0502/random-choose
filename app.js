@@ -353,18 +353,28 @@ function handleAddName() {
 
 // Supabase DB에 이름을 영구 저장하는 비동기 함수 (handleAddName과 분리)
 async function saveNameToSupabase(name) {
-    if (!supabase) return; // Supabase 미연결 시 조용히 종료
+    if (!supabase) {
+        alert("수파베이스에 연결되어 있지 않아 서버에 저장할 수 없습니다.\n화면에는 임시로 추가되지만, 새로고침 시 사라집니다.");
+        return;
+    }
 
     try {
         const { error } = await supabase
             .from('members')
             .insert([{ name: name }]);
 
-        if (error && error.code !== '23505') {
-            // 23505 = 중복 키 에러 (이미 DB에 있는 이름은 무시)
-            console.warn("Supabase 저장 실패:", error.message);
+        if (error) {
+            if (error.code === '23505') {
+                // 이미 존재함
+                console.warn("Supabase 중복 데이터:", name);
+            } else {
+                alert("수파베이스에 이름을 저장하지 못했습니다.\n오류 내용: " + error.message + " (코드: " + error.code + ")");
+            }
+        } else {
+            console.log(`Supabase 저장 완료: ${name}`);
         }
     } catch (err) {
+        alert("수파베이스 전송 중 네트워크 오류가 발생했습니다: " + err.message);
         console.error("Supabase 저장 중 오류:", err);
     }
 }
@@ -1140,10 +1150,12 @@ async function initSupabase() {
         if (error) throw error;
 
         setSupabaseStatus('connected');
+        console.log("Supabase 연결 성공!");
     } catch (err) {
         console.error("Supabase 연결 실패:", err);
         setSupabaseStatus('disconnected');
         supabase = null; // 연결 실패 시 인스턴스 해제
+        alert("수파베이스 연결에 실패했습니다: " + err.message + "\n인터넷 연결 상태나 수파베이스 설정을 확인해 주세요.");
     }
 }
 
