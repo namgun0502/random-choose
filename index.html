@@ -23,6 +23,10 @@
             </div>
             <!-- 사운드 토글 및 테마 조절 컨트롤 -->
             <div class="header-controls">
+                <button id="supabaseSetupBtn" class="control-btn" title="수파베이스 설정">
+                    <span id="supabaseStatusDot" class="status-dot disconnected"></span>
+                    <span class="btn-text">수파베이스 설정 ⚙️</span>
+                </button>
                 <button id="soundToggleBtn" class="control-btn" title="사운드 켜기/끄기">
                     <span id="soundIcon">🔊</span> <span id="soundText">소리 켬</span>
                 </button>
@@ -38,7 +42,12 @@
 
             <!-- 참여자 등록 영역 -->
             <div class="input-section">
-                <label for="nameInput">참여자 이름 등록</label>
+                <div class="input-header-row">
+                    <label for="nameInput">참여자 이름 등록</label>
+                    <button id="loadSupabaseBtn" class="btn btn-secondary btn-sm" title="수파베이스에서 참여자 목록을 새로 불러옵니다" disabled>
+                        🔄 수파베이스에서 불러오기
+                    </button>
+                </div>
                 <div class="input-group">
                     <input type="text" id="nameInput" placeholder="이름을 입력하세요 (예: 남건)" autocomplete="off" maxlength="10">
                     <button id="addNameBtn" class="btn btn-primary">추가</button>
@@ -130,6 +139,32 @@
         </div>
     </div>
 
+    <!-- Supabase 설정 모달 -->
+    <div id="supabaseModal" class="modal-overlay">
+        <div class="modal-content supabase-modal-content">
+            <div class="modal-badge">⚙️ SETTINGS</div>
+            <h3>⚡ Supabase 연동 설정</h3>
+            <p class="modal-description">Supabase 프로젝트의 API 정보를 입력하면 참여자 목록을 자동으로 가져옵니다.</p>
+            
+            <div class="form-group">
+                <label for="supabaseUrlInput">Supabase Project URL</label>
+                <input type="text" id="supabaseUrlInput" placeholder="https://your-project.supabase.co" autocomplete="off">
+            </div>
+            
+            <div class="form-group">
+                <label for="supabaseKeyInput">Supabase Anon Key (API Key)</label>
+                <input type="password" id="supabaseKeyInput" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." autocomplete="off">
+            </div>
+            
+            <div class="modal-actions">
+                <button id="saveSupabaseBtn" class="btn btn-accent">저장하기</button>
+                <button id="closeSupabaseModalBtn" class="btn btn-secondary">닫기</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Supabase JS Client SDK 로드 -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="app.js"></script>
 </body>
 </html>

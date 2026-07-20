@@ -13,6 +13,11 @@ let audioCtx = null;     // Web Audio Context 객체
 // 게임 상태: 'READY' (준비), 'PLAYING' (플레이 중), 'GAME_OVER' (결과화면)
 let gameState = 'READY';
 
+// Supabase 클라이언트 및 설정 상태 변수들
+let supabase = null;
+let supabaseUrl = '';
+let supabaseKey = '';
+
 // Canvas 관련 변수
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
@@ -72,12 +77,28 @@ const hitNumber = document.getElementById('hitNumber');
 const hitName = document.getElementById('hitName');
 const closeModalBtn = document.getElementById('closeModalBtn');
 
+// Supabase 관련 DOM 요소들
+const supabaseSetupBtn = document.getElementById('supabaseSetupBtn');
+const supabaseStatusDot = document.getElementById('supabaseStatusDot');
+const loadSupabaseBtn = document.getElementById('loadSupabaseBtn');
+const supabaseModal = document.getElementById('supabaseModal');
+const supabaseUrlInput = document.getElementById('supabaseUrlInput');
+const supabaseKeyInput = document.getElementById('supabaseKeyInput');
+const saveSupabaseBtn = document.getElementById('saveSupabaseBtn');
+const closeSupabaseModalBtn = document.getElementById('closeSupabaseModalBtn');
+
 // 3. 초기화 설정 및 이벤트 바인딩
-window.addEventListener('DOMContentLoaded', () => {
+window.addEventListener('DOMContentLoaded', async () => {
     resizeCanvas();
     window.addEventListener('resize', resizeCanvas);
     setupEvents();
     updateUI();
+
+    // 페이지 접속 시 기존에 등록한 Supabase 계정이 있다면 자동 연결 및 인원 로드
+    await initSupabase();
+    if (supabase) {
+        await fetchSupabaseMembers(true); // silent=true로 자동 패치 실패 시 팝업 경고 방지
+    }
 });
 
 // Canvas 크기 조절 함수 (반응형 16:10 비율 유지)
@@ -141,6 +162,46 @@ function setupEvents() {
     // 결과 화면 제어 버튼들
     restartSameBtn.addEventListener('click', restartSameMembers);
     resetAllBtn.addEventListener('click', resetAllGame);
+
+    // --- Supabase 관련 이벤트 핸들러 ---
+    // Supabase 설정 열기
+    supabaseSetupBtn.addEventListener('click', () => {
+        supabaseUrlInput.value = localStorage.getItem('supabaseUrl') || '';
+        supabaseKeyInput.value = localStorage.getItem('supabaseKey') || '';
+        supabaseModal.classList.add('active');
+    });
+
+    // Supabase 설정 닫기
+    closeSupabaseModalBtn.addEventListener('click', () => {
+        supabaseModal.classList.remove('active');
+    });
+
+    // Supabase 설정 저장 및 연결
+    saveSupabaseBtn.addEventListener('click', async () => {
+        const url = supabaseUrlInput.value.trim();
+        const key = supabaseKeyInput.value.trim();
+
+        if (!url || !key) {
+            alert("Supabase Project URL과 Anon Key를 모두 입력해 주세요!");
+            return;
+        }
+
+        localStorage.setItem('supabaseUrl', url);
+        localStorage.setItem('supabaseKey', key);
+        
+        supabaseModal.classList.remove('active');
+
+        // 초기화 및 인원 불러오기 진행
+        await initSupabase();
+        if (supabase) {
+            await fetchSupabaseMembers();
+        }
+    });
+
+    // Supabase 인원 수동 불러오기
+    loadSupabaseBtn.addEventListener('click', async () => {
+        await fetchSupabaseMembers();
+    });
 }
 
 // 4. 사운드 효과음 합성 엔진 (Web Audio API 사용)
@@ -1033,7 +1094,7 @@ function restartSameMembers() {
 }
 
 // 완전 초기화 및 새 판 짜기
-function resetAllGame() {
+async function resetAllGame() {
     participants = [];
     winners = [];
     gameState = 'READY';
@@ -1053,4 +1114,122 @@ function resetAllGame() {
     stepReady.classList.add('active');
     
     updateUI();
+
+    // Supabase가 연결되어 있으면 다시 깨끗하게 원본 데이터를 채워줍니다.
+    if (supabase) {
+        await fetchSupabaseMembers(true);
+    }
+}
+
+// ==========================================
+// Supabase 클라이언트 초기화 및 데이터 연동 함수
+// ==========================================
+
+// Supabase 초기화 함수
+async function initSupabase() {
+    // 1. 로컬스토리지에서 URL과 Key를 읽어옵니다.
+    supabaseUrl = localStorage.getItem('supabaseUrl') || '';
+    supabaseKey = localStorage.getItem('supabaseKey') || '';
+
+    // 2. 값 확인
+    if (!supabaseUrl || !supabaseKey) {
+        setSupabaseStatus('disconnected');
+        return;
+    }
+
+    setSupabaseStatus('loading');
+
+    try {
+        // CDN으로 로드된 supabase 클라이언트가 준비되었는지 확인
+        if (typeof createClient === 'undefined' && typeof window.supabase === 'undefined') {
+            throw new Error("Supabase SDK가 제대로 로드되지 않았습니다. 인터넷 상태를 확인해 주세요.");
+        }
+
+        // 글로벌 변수 createClient는 window.supabase.createClient를 가리킬 수도 있음
+        const makeClient = (typeof createClient !== 'undefined') ? createClient : window.supabase.createClient;
+        
+        // 3. 클라이언트 객체 생성
+        supabase = makeClient(supabaseUrl, supabaseKey);
+        
+        // 4. 간단한 테스트 쿼리로 연결성 확인 (members 테이블 정보 1개만 조회)
+        const { data, error } = await supabase.from('members').select('id').limit(1);
+        
+        if (error) throw error;
+
+        setSupabaseStatus('connected');
+    } catch (err) {
+        console.error("Supabase 연결 실패:", err);
+        setSupabaseStatus('disconnected');
+        supabase = null; // 연결 실패 시 인스턴스 해제
+    }
+}
+
+// 연결 상태에 따라 표시등 LED 및 버튼 상태를 바꾸는 헬퍼 함수
+function setSupabaseStatus(status) {
+    supabaseStatusDot.className = 'status-dot ' + status;
+    
+    if (status === 'connected') {
+        loadSupabaseBtn.disabled = false;
+        loadSupabaseBtn.title = "수파베이스에서 참여자 목록을 새로 불러옵니다";
+    } else {
+        loadSupabaseBtn.disabled = true;
+        loadSupabaseBtn.title = "수파베이스 연결이 필요합니다";
+        if (status === 'disconnected') {
+            supabaseStatusDot.classList.add('disconnected');
+        } else if (status === 'loading') {
+            supabaseStatusDot.classList.add('loading');
+        }
+    }
+}
+
+// Supabase 데이터베이스로부터 인원 정보를 가져오는 함수
+async function fetchSupabaseMembers(silent = false) {
+    if (!supabase) {
+        if (!silent) alert("Supabase 설정이 올바르지 않거나 연결되어 있지 않습니다.");
+        return;
+    }
+
+    try {
+        setSupabaseStatus('loading');
+        
+        // members 테이블에서 모든 데이터(name) 가져오기 (가장 최근 순 혹은 ID 오름차순)
+        const { data, error } = await supabase
+            .from('members')
+            .select('name')
+            .order('id', { ascending: true });
+
+        if (error) throw error;
+
+        if (!data || data.length === 0) {
+            if (!silent) {
+                alert("수파베이스의 members 테이블에 등록된 이름이 없습니다!\nSupabase 대시보드에서 members 테이블에 이름을 추가해 주세요.");
+            }
+            setSupabaseStatus('connected');
+            return;
+        }
+
+        // 가져온 데이터로 participants 배열 재구성
+        participants = data.map(item => ({
+            name: item.name,
+            number: 0 // 임시 번호 (셔플에서 지정 예정)
+        }));
+
+        // 번호를 랜덤하게 무작위 배정
+        shuffleAndAssignNumbers();
+        
+        // UI 리뉴얼
+        updateUI();
+        
+        setSupabaseStatus('connected');
+        
+        if (!silent) {
+            alert(`성공적으로 Supabase에서 ${data.length}명의 인원을 가져왔습니다!`);
+        }
+    } catch (err) {
+        console.error("데이터 로드 실패:", err);
+        setSupabaseStatus('disconnected');
+        if (!silent) {
+            alert("Supabase에서 데이터를 가져오는 도중 오류가 발생했습니다.\n테이블 이름(members) 및 스키마 설정을 확인해 주세요.");
+        }
+    }
 }

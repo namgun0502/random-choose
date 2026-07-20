@@ -803,3 +803,123 @@ body {
         gap: 10px;
     }
 }
+
+/* ==========================================
+   Supabase 연동 관련 추가 스타일
+   ========================================== */
+
+/* 1. 헤더 연결 상태 LED */
+.status-dot {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    transition: var(--transition);
+}
+
+.status-dot.connected {
+    background-color: #00ff66;
+    box-shadow: 0 0 10px #00ff66, 0 0 20px #00ff66;
+}
+
+.status-dot.disconnected {
+    background-color: var(--color-danger);
+    box-shadow: 0 0 10px var(--color-danger), 0 0 20px var(--color-danger);
+}
+
+.status-dot.loading {
+    background-color: var(--color-warning);
+    box-shadow: 0 0 10px var(--color-warning), 0 0 20px var(--color-warning);
+    animation: pulseGlow 1s infinite alternate;
+}
+
+@keyframes pulseGlow {
+    from { opacity: 0.4; }
+    to { opacity: 1; }
+}
+
+/* 2. 참여자 등록 영역 상단 버튼 배치 */
+.input-header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 4px;
+}
+
+.input-header-row label {
+    margin-bottom: 0;
+}
+
+/* 3. Supabase 설정 모달 내 폼 그룹 */
+.supabase-modal-content {
+    max-width: 480px;
+    border-color: rgba(79, 172, 254, 0.4);
+    box-shadow: 0 0 40px rgba(79, 172, 254, 0.25), 0 30px 60px rgba(0,0,0,0.6);
+}
+
+.supabase-modal-content h3 {
+    font-size: 1.4rem;
+    color: #fff;
+    margin-top: 5px;
+}
+
+.supabase-modal-content .modal-description {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    line-height: 1.5;
+    margin-bottom: 10px;
+}
+
+.supabase-modal-content .form-group {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+    margin-bottom: 15px;
+}
+
+.supabase-modal-content .form-group label {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+}
+
+.supabase-modal-content .form-group input {
+    width: 100%;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid var(--card-border);
+    padding: 12px 16px;
+    border-radius: 10px;
+    color: #fff;
+    font-size: 0.95rem;
+    transition: var(--transition);
+}
+
+.supabase-modal-content .form-group input:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: 0 0 10px var(--color-primary-glow);
+    background: rgba(0, 0, 0, 0.45);
+}
+
+.supabase-modal-content .modal-actions {
+    width: 100%;
+    display: flex;
+    gap: 12px;
+    margin-top: 10px;
+}
+
+.supabase-modal-content .modal-actions button {
+    flex: 1;
+}
+
+/* 모바일에서의 수파베이스 설정 버튼 텍스트 조절 */
+@media (max-width: 600px) {
+    .control-btn .btn-text {
+        display: none; /* 모바일에서는 아이콘과 불빛만 보이거나 텍스트 생략 */
+    }
+    .control-btn {
+        padding: 8px 12px;
+    }
+}
