@@ -19,10 +19,8 @@ let supabaseUrl = '';
 let supabaseKey = '';
 
 // ==========================================
-// ⚠️ [기본 Supabase 설정] 매번 주소를 입력하기 번거로우시다면 여기에 적어주세요!
+// ⚠️ [기본 Supabase 설정] 항상 연동되도록 여기에 적어둡니다!
 // ==========================================
-// 아래 큰따옴표("") 사이에 본인의 Supabase Project URL과 Anon Key를 입력해 두시면,
-// 사이트에 들어올 때마다 수동으로 설정창을 열어 저장할 필요 없이 항상 자동으로 연결됩니다.
 const DEFAULT_SUPABASE_URL = "https://qzhgsshyhmnczmreagqd.supabase.co"; 
 const DEFAULT_SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF6aGdzc2h5aG1uY3ptcmVhZ3FkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIyNzc0NzksImV4cCI6MjA5Nzg1MzQ3OX0.2NZxyClmIpj7WtUuZtexZqAMuTnC7udF5FejwitzvcU";
 
