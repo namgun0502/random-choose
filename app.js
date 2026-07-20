@@ -18,6 +18,14 @@ let supabase = null;
 let supabaseUrl = '';
 let supabaseKey = '';
 
+// ==========================================
+// ⚠️ [기본 Supabase 설정] 매번 주소를 입력하기 번거로우시다면 여기에 적어주세요!
+// ==========================================
+// 아래 큰따옴표("") 사이에 본인의 Supabase Project URL과 Anon Key를 입력해 두시면,
+// 사이트에 들어올 때마다 수동으로 설정창을 열어 저장할 필요 없이 항상 자동으로 연결됩니다.
+const DEFAULT_SUPABASE_URL = "https://qzhgsshyhmnczmreagqd.supabase.co"; 
+const DEFAULT_SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF6aGdzc2h5aG1uY3ptcmVhZ3FkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIyNzc0NzksImV4cCI6MjA5Nzg1MzQ3OX0.2NZxyClmIpj7WtUuZtexZqAMuTnC7udF5FejwitzvcU";
+
 // Canvas 관련 변수
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
@@ -166,8 +174,9 @@ function setupEvents() {
     // --- Supabase 관련 이벤트 핸들러 ---
     // Supabase 설정 열기
     supabaseSetupBtn.addEventListener('click', () => {
-        supabaseUrlInput.value = localStorage.getItem('supabaseUrl') || '';
-        supabaseKeyInput.value = localStorage.getItem('supabaseKey') || '';
+        // 코드에 적힌 기본값(DEFAULT)이 있으면 우선 보여주고, 없으면 로컬스토리지 값을 보여줍니다.
+        supabaseUrlInput.value = DEFAULT_SUPABASE_URL || localStorage.getItem('supabaseUrl') || '';
+        supabaseKeyInput.value = DEFAULT_SUPABASE_KEY || localStorage.getItem('supabaseKey') || '';
         supabaseModal.classList.add('active');
     });
 
@@ -1127,11 +1136,17 @@ async function resetAllGame() {
 
 // Supabase 초기화 함수
 async function initSupabase() {
-    // 1. 로컬스토리지에서 URL과 Key를 읽어옵니다.
-    supabaseUrl = localStorage.getItem('supabaseUrl') || '';
-    supabaseKey = localStorage.getItem('supabaseKey') || '';
+    // 1. 코드 상단의 기본값(DEFAULT)이 먼저 입력되어 있는지 확인합니다.
+    if (DEFAULT_SUPABASE_URL && DEFAULT_SUPABASE_KEY) {
+        supabaseUrl = DEFAULT_SUPABASE_URL;
+        supabaseKey = DEFAULT_SUPABASE_KEY;
+    } else {
+        // 2. 기본값이 비어있다면, 기존처럼 브라우저 저장소(localStorage)에서 읽어옵니다.
+        supabaseUrl = localStorage.getItem('supabaseUrl') || '';
+        supabaseKey = localStorage.getItem('supabaseKey') || '';
+    }
 
-    // 2. 값 확인
+    // 3. 값 확인
     if (!supabaseUrl || !supabaseKey) {
         setSupabaseStatus('disconnected');
         return;

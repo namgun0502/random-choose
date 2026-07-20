@@ -8,7 +8,7 @@
 
 - **Supabase 연동 자격 증명 (URL & API Key) 관리**
   - 사용자가 편리하게 연동할 수 있도록 웹 화면에 **"Supabase 설정 모달"**을 제공하여 URL과 Anon Key를 브라우저 로컬 저장소(localStorage)에 저장하도록 구현합니다.
-  - 이렇게 하면 매번 코드를 수정하지 않아도 브라우저 화면에서 쉽게 자신의 Supabase 프로젝트를 연결할 수 있습니다.
+  - 추가로, 코드 상단에 접속 주소와 키를 고정으로 기입하여 항상 자동 로그인이 될 수 있게 하는 **기본값 우선 연동 방식**을 보완 적용합니다.
 
 - **보안 및 암호화 관련 (규칙 8)**
   - 참여자의 이름은 일반적인 닉네임 수준이므로 기본적으로는 평문으로 저장합니다. 
@@ -60,7 +60,8 @@ CREATE POLICY "Allow public delete access" ON public.members
 - 설정 모달 팝업, 연동 상태 표시등(초록/빨강 LED 효과), Supabase 불러오기 버튼 등에 대한 현대적이고 직관적인 CSS 스타일 정의
 
 #### [MODIFY] [app.js](file:///c:/Users/user/Desktop/cannon-game/app.js)
-- **설정 로드/저장**: `localStorage`에서 Supabase 설정값(URL, Key)을 로드하여 자동 연결
+- **기본값 우선 연동**: 코드 상단에 `DEFAULT_SUPABASE_URL` 및 `DEFAULT_SUPABASE_KEY` 상수를 제공하여, 이곳에 값을 입력해 두면 페이지 로딩 시 자동으로 Supabase에 연결되도록 함.
+- **설정 로드/저장**: 기본값이 없을 때에 한하여 `localStorage`에서 Supabase 설정값(URL, Key)을 로드하여 자동 연결
 - **연동 및 데이터 패치**:
   - Supabase 클라이언트 초기화 함수 구현
   - `fetchSupabaseMembers()` 함수를 통해 데이터베이스에서 이름 목록(`members` 테이블)을 로드
@@ -77,9 +78,11 @@ CREATE POLICY "Allow public delete access" ON public.members
 1. **Supabase 연동 테스트**:
    - 화면 우측 상단의 "Supabase 설정"을 클릭하고 자신의 Supabase 프로젝트 URL 및 Anon Key를 입력하여 저장합니다.
    - 연동 상태 표시등이 초록색(연동 성공)으로 변하는지 확인합니다.
-2. **데이터 불러오기 테스트**:
+2. **코드 내 기본값 우선 테스트**:
+   - `app.js` 상단 변수에 직접 URL과 Anon Key를 넣어두고 페이지를 띄웠을 때 설정 창 열기 없이 즉시 초록색 LED로 시작되는지 확인합니다.
+3. **데이터 불러오기 테스트**:
    - Supabase 테이블(`members`)에 이름(예: `남건`, `홍길동`, `이순신`)을 임의로 입력해 둡니다.
    - 앱 준비 화면에서 "Supabase에서 불러오기" 버튼을 누르거나 페이지 로딩 시 자동으로 이름을 성공적으로 긁어오는지 확인합니다.
-3. **임시 삭제 테스트**:
+4. **임시 삭제 테스트**:
    - 목록에서 특정 이름의 `X` 버튼을 눌렀을 때, 로컬 화면에서만 지워지고 실제 Supabase 데이터베이스에는 삭제가 되지 않았는지 Supabase 대시보드에서 직접 확인합니다.
    - "처음으로" 혹은 "불러오기" 버튼을 다시 누르면 Supabase에 저장된 원본 멤버들이 다시 화면에 온전히 복구되는지 검증합니다.
