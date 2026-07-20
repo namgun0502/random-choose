@@ -601,21 +601,17 @@ function generateLadderStructure() {
     var padding = 50;
     var colWidth = (w - (padding * 2)) / (count - 1);
 
-    // 💡 [선 조금 더 추가] levels를 15 -> 25단계로 늘려 촘촘하게 설계
     var levels = 25; 
-    // 💡 다리 개수를 기존 인원수 * 3 에서 인원수 * 5 배수로 대폭 확장
     var bridgeCount = count * 5; 
     
     for (var i = 0; i < bridgeCount; i++) {
         var startLine = Math.floor(Math.random() * (count - 1));
-        var level = Math.floor(Math.random() * (levels - 2)) + 1; // 0과 끝 레벨 제외
+        var level = Math.floor(Math.random() * (levels - 2)) + 1;
 
-        // 이미 같은 자리에 다리가 있는지 체크
         var exists = ladderBridges.some(function(b) {
             return b.startLine === startLine && b.level === level;
         });
 
-        // 좌우 연속으로 3단 다리가 연결되지 않도록 조절 (단조로움 방지)
         var neighbor = ladderBridges.some(function(b) {
             return (b.startLine === startLine - 1 || b.startLine === startLine + 1) && b.level === level;
         });
@@ -628,10 +624,8 @@ function generateLadderStructure() {
         }
     }
 
-    // 높이순 정렬
     ladderBridges.sort(function(a, b) { return a.level - b.level; });
 
-    // 플레이어 개별 고유 네온 칼라 지정
     var topY = 60;
     participants.forEach(function(p, i) {
         var startX = padding + (i * colWidth);
@@ -642,6 +636,7 @@ function generateLadderStructure() {
             y: topY,
             lineIndex: i,
             done: false,
+            isMoving: false, // 💡 추가: 현재 주행(이동) 중인지 여부
             path: [{x: startX, y: topY}]
         });
     });
@@ -659,11 +654,9 @@ function drawLadderInitial() {
 
     ladCtx.clearRect(0, 0, w, h);
     
-    // 깊이 있는 네온 테마 다크 배경
     ladCtx.fillStyle = '#0a0b16';
     ladCtx.fillRect(0, 0, w, h);
 
-    // 격자 사다리 세로 기둥 그리기 (은은한 네온 그레이)
     ladCtx.strokeStyle = 'rgba(255, 255, 255, 0.12)';
     ladCtx.lineWidth = 4;
     for (var i = 0; i < count; i++) {
@@ -673,18 +666,23 @@ function drawLadderInitial() {
         ladCtx.lineTo(x, bottomY);
         ladCtx.stroke();
 
-        // 💡 [사람이름이 랜덤한 색의 글씨로 적용]
         var pColor = ladderColors[i % ladderColors.length];
         ladCtx.save();
         ladCtx.fillStyle = pColor;
+        // 마우스를 올릴 수 있는 인터랙션 영역임을 알리기 위해 크기를 키움
         ladCtx.font = 'bold 15px Noto Sans KR';
         ladCtx.shadowColor = pColor;
-        ladCtx.shadowBlur = 8; // 이름 글씨에 글로우 효과 적용
+        ladCtx.shadowBlur = 8;
         ladCtx.textAlign = 'center';
-        ladCtx.fillText(participants[i].name, x, topY - 20);
+        // 아직 타지 않은 사람 이름 위에는 마우스 클릭 유도 아이콘 살짝 배치 가능
+        var nameText = participants[i].name;
+        var pState = ladderPlayers[i];
+        if (pState && !pState.done && !pState.isMoving) {
+            nameText += ' 👇'; // 누르면 탈 수 있다는 표시
+        }
+        ladCtx.fillText(nameText, x, topY - 20);
         ladCtx.restore();
 
-        // 아래에 입력한 상품 배치 (네온 민트 컬러)
         var prizeText = ladderPrizes[i] || '꽝';
         ladCtx.fillStyle = '#00f2fe';
         ladCtx.font = 'bold 13px Noto Sans KR';
@@ -692,10 +690,9 @@ function drawLadderInitial() {
         ladCtx.fillText(prizeText, x, bottomY + 25);
     }
 
-    // 사다리 가로 다리 그리기 (촘촘해진 선)
     ladCtx.strokeStyle = 'rgba(255, 255, 255, 0.22)';
     ladCtx.lineWidth = 3;
-    var stepH = (bottomY - topY) / 25; // 25 등분
+    var stepH = (bottomY - topY) / 25;
     ladderBridges.forEach(function(b) {
         var x1 = padding + (b.startLine * colWidth);
         var x2 = padding + ((b.startLine + 1) * colWidth);
@@ -708,10 +705,59 @@ function drawLadderInitial() {
     });
 }
 
+// 💡 캔버스에서 사람이름 클릭 시 개별 타기 이벤트 처리기 추가
+ladCvs.addEventListener('click', function(e) {
+    if (gameState !== 'PLAYING' || activeTab !== 'ladder') return;
+    
+    var rect = ladCvs.getBoundingClientRect();
+    var mouseX = e.clientX - rect.left;
+    var mouseY = e.clientY - rect.top;
+    
+    var count = participants.length;
+    var padding = 50;
+    var colWidth = (ladCvs.width - (padding * 2)) / (count - 1);
+    var topY = 60;
+    
+    // 상단 이름 터치 영역 (Y축 범위 체크)
+    if (mouseY >= topY - 45 && mouseY <= topY + 5) {
+        for (var i = 0; i < count; i++) {
+            var lineX = padding + (i * colWidth);
+            // 클릭 가로 폭 편차 +-30px 허용
+            if (mouseX >= lineX - 35 && mouseX <= lineX + 35) {
+                var p = ladderPlayers[i];
+                if (p && !p.done && !p.isMoving) {
+                    p.isMoving = true;
+                    playShoot(); // 출발음 효과
+                    
+                    // 만약 시뮬레이션 루프가 아직 돌고 있지 않다면 루프 기동
+                    if (!ladderActive) {
+                        ladderActive = true;
+                        ladOverlay.style.display = 'block';
+                        runLadderBtn.disabled = true;
+                        animLoop();
+                    }
+                }
+                break;
+            }
+        }
+    }
+});
+
 function runLadderSimulation() {
     runLadderBtn.disabled = true;
     ladOverlay.style.display = 'block';
     ladderActive = true;
+
+    // 모든 플레이어 동시 출발
+    ladderPlayers.forEach(function(p) {
+        if (!p.done) p.isMoving = true;
+    });
+
+    animLoop();
+}
+
+function animLoop() {
+    if (!ladderActive) return;
 
     var w = ladCvs.width;
     var h = ladCvs.height;
@@ -720,104 +766,101 @@ function runLadderSimulation() {
     var colWidth = (w - (padding * 2)) / (count - 1);
     var topY = 60;
     var bottomY = h - 60;
-    var stepH = (bottomY - topY) / 25; // levels = 25
+    var stepH = (bottomY - topY) / 25;
 
-    var stepSize = 4; // 속도감 있게 4픽셀씩 이동
+    // 💡 [속도 조절] stepSize를 4 -> 2로 낮추어 슬로우 연출
+    var stepSize = 2; 
+
+    var allDone = true;
+    ladCtx.clearRect(0, 0, w, h);
     
-    function animLoop() {
-        if (!ladderActive) return;
+    drawLadderInitial();
 
-        var allDone = true;
-        ladCtx.clearRect(0, 0, w, h);
+    ladderPlayers.forEach(function(p, pIdx) {
+        ladCtx.save();
         
-        // 베이스 배경 및 사다리 구조
-        drawLadderInitial();
+        // 궤적
+        ladCtx.strokeStyle = p.color;
+        ladCtx.lineWidth = 5;
+        ladCtx.shadowColor = p.color;
+        ladCtx.shadowBlur = 10;
+        ladCtx.lineCap = 'round';
+        ladCtx.lineJoin = 'round';
+        
+        ladCtx.beginPath();
+        ladCtx.moveTo(p.path[0].x, p.path[0].y);
+        for (var k = 1; k < p.path.length; k++) {
+            ladCtx.lineTo(p.path[k].x, p.path[k].y);
+        }
+        ladCtx.stroke();
+        
+        var lastPt = p.path[p.path.length - 1];
 
-        // 💡 [실제 사다리 타는 듯한 강렬한 네온 불빛 연출]
-        ladderPlayers.forEach(function(p, pIdx) {
-            ladCtx.save();
-            
-            // 1) 지나간 궤적 네온 발광 그리기
-            ladCtx.strokeStyle = p.color;
-            ladCtx.lineWidth = 5;
-            ladCtx.shadowColor = p.color;
-            ladCtx.shadowBlur = 10;
-            ladCtx.lineCap = 'round';
-            ladCtx.lineJoin = 'round';
-            
-            ladCtx.beginPath();
-            ladCtx.moveTo(p.path[0].x, p.path[0].y);
-            for (var k = 1; k < p.path.length; k++) {
-                ladCtx.lineTo(p.path[k].x, p.path[k].y);
-            }
-            ladCtx.stroke();
-            
-            var lastPt = p.path[p.path.length - 1];
+        // 헤드 볼
+        ladCtx.fillStyle = '#ffffff';
+        ladCtx.shadowColor = '#ffffff';
+        ladCtx.shadowBlur = 15;
+        ladCtx.beginPath();
+        ladCtx.arc(lastPt.x, lastPt.y, 7, 0, Math.PI*2);
+        ladCtx.fill();
+        
+        ladCtx.restore();
 
-            // 2) 현재 지점 헤드 라이트볼 그리기
-            ladCtx.fillStyle = '#ffffff';
-            ladCtx.shadowColor = '#ffffff';
-            ladCtx.shadowBlur = 15;
-            ladCtx.beginPath();
-            ladCtx.arc(lastPt.x, lastPt.y, 7, 0, Math.PI*2);
-            ladCtx.fill();
-            
-            ladCtx.restore();
+        // 💡 주행 중 상태 관리
+        if (p.isMoving && !p.done) {
+            allDone = false;
+            var newY = lastPt.y + stepSize;
+            var crossedBridge = null;
 
-            if (!p.done) {
-                allDone = false;
-                var newY = lastPt.y + stepSize;
-                var crossedBridge = null;
-
-                // 다리 통과 여부 검사
-                ladderBridges.forEach(function(b) {
-                    var bY = topY + (b.level * stepH);
-                    if (lastPt.y < bY && newY >= bY) {
-                        if (p.lineIndex === b.startLine) {
-                            crossedBridge = { bridge: b, direction: 1 };
-                        } else if (p.lineIndex === b.startLine + 1) {
-                            crossedBridge = { bridge: b, direction: -1 };
-                        }
-                    }
-                });
-
-                if (crossedBridge) {
-                    var bY = topY + (crossedBridge.bridge.level * stepH);
-                    p.path.push({ x: lastPt.x, y: bY });
-
-                    p.lineIndex += crossedBridge.direction;
-                    var nextX = padding + (p.lineIndex * colWidth);
-                    p.path.push({ x: nextX, y: bY });
-
-                    playShoot(); // 옆으로 꺾일 때 소리 효과
-                } else {
-                    if (newY >= bottomY) {
-                        p.path.push({ x: lastPt.x, y: bottomY });
-                        p.done = true;
-                        
-                        var resultPrize = ladderPrizes[p.lineIndex] || '꽝';
-                        ladderResult.push({
-                            name: p.name,
-                            prize: resultPrize
-                        });
-                        playHit(); // 도착음
-                    } else {
-                        p.path.push({ x: lastPt.x, y: newY });
+            ladderBridges.forEach(function(b) {
+                var bY = topY + (b.level * stepH);
+                if (lastPt.y < bY && newY >= bY) {
+                    if (p.lineIndex === b.startLine) {
+                        crossedBridge = { bridge: b, direction: 1 };
+                    } else if (p.lineIndex === b.startLine + 1) {
+                        crossedBridge = { bridge: b, direction: -1 };
                     }
                 }
+            });
+
+            if (crossedBridge) {
+                var bY = topY + (crossedBridge.bridge.level * stepH);
+                p.path.push({ x: lastPt.x, y: bY });
+
+                p.lineIndex += crossedBridge.direction;
+                var nextX = padding + (p.lineIndex * colWidth);
+                p.path.push({ x: nextX, y: bY });
+
+                playShoot();
+            } else {
+                if (newY >= bottomY) {
+                    p.path.push({ x: lastPt.x, y: bottomY });
+                    p.done = true;
+                    
+                    var resultPrize = ladderPrizes[p.lineIndex] || '꽝';
+                    ladderResult.push({
+                        name: p.name,
+                        prize: resultPrize
+                    });
+                    playHit();
+                } else {
+                    p.path.push({ x: lastPt.x, y: newY });
+                }
             }
-        });
-
-        if (allDone) {
-            ladderActive = false;
-            setTimeout(showLadderResult, 1200);
-        } else {
-            requestAnimationFrame(animLoop);
+        } else if (!p.done) {
+            // 아직 출발하지 않고 상단 대기 중인 사람이 있다면 완료가 아님
+            allDone = false;
         }
-    }
+    });
 
-    requestAnimationFrame(animLoop);
+    if (allDone) {
+        ladderActive = false;
+        setTimeout(showLadderResult, 1200);
+    } else {
+        requestAnimationFrame(animLoop);
+    }
 }
+
 
 
 
