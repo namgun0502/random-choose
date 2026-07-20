@@ -253,10 +253,17 @@ function shuffle(){
 })();
 
 function loadFromDb(){
-    if(!supabase) return;
+    if(!supabase) {
+        console.warn('수파베이스 클라이언트가 생성되지 않았습니다.');
+        return;
+    }
     supabase.from('members').select('name').order('id',{ascending:true})
         .then(function(res){
-            if(res.error){ console.error('로드 실패:', res.error.message); return; }
+            if(res.error){ 
+                alert('DB 불러오기 실패 (테이블 조회 에러):\n' + res.error.message);
+                console.error('로드 실패:', res.error.message); 
+                return; 
+            }
             if(!res.data||!res.data.length) return;
             var existing = participants.map(function(p){ return p.name; });
             res.data.forEach(function(row){
@@ -264,8 +271,12 @@ function loadFromDb(){
                     participants.push({ name:row.name, number:0 });
             });
             shuffle(); updateUI();
-        }).catch(function(e){ console.error('로드 오류:', e.message); });
+        }).catch(function(e){ 
+            alert('DB 불러오기 에러 (네트워크/연결):\n' + e.message);
+            console.error('로드 오류:', e.message); 
+        });
 }
+
 
 function saveToDb(name){
     if(!supabase) return;
