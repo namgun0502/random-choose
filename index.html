@@ -9,6 +9,11 @@
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
     <link rel="icon" href="data:;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==">
     <link rel="stylesheet" href="style.css">
+    
+    <!-- Supabase SDK (먼저 로드) -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- 앱 메인 스크립트 (defer를 주어 HTML 파싱 완료 및 SDK 로드 후 순서대로 실행되게 강제함) -->
+    <script defer src="app.js?v=3.6"></script>
 </head>
 <body>
     <div class="stars-background"></div>
@@ -162,10 +167,5 @@
             <button type="button" id="closeModalBtn" class="btn btn-accent">계속하기</button>
         </div>
     </div>
-
-    <!-- Supabase SDK -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <!-- 앱 메인 스크립트 -->
-    <script src="app.js?v=3.5"></script>
 </body>
 </html>
