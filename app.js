@@ -4,6 +4,12 @@
    기능: 참여자 관리, 실시간 셔플, Canvas 애니메이션, Web Audio API 사운드 합성
    ========================================== */
 
+// 전역 에러 핸들러 (브라우저 내 모든 스크립트 에러를 감지하여 팝업창으로 경고)
+window.onerror = function(message, source, lineno, colno, error) {
+    alert("❌ [자바스크립트 실행 오류]\n\n메시지: " + message + "\n파일: " + source + "\n라인: " + lineno + ":" + colno);
+    return false;
+};
+
 // 1. 전역 상태 관리 변수들
 let participants = []; // { name: 이름, number: 배정 번호 }
 let winners = [];       // 당첨된 참여자들의 목록
