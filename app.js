@@ -595,28 +595,27 @@ function generateLadderStructure() {
     ladderPlayers = [];
     ladderResult = [];
 
-    // 기둥 수 = 참여자 수
     var w = ladCvs.width;
     var h = ladCvs.height;
     
-    // 좌우 여백을 주어 중앙에 정렬
     var padding = 50;
     var colWidth = (w - (padding * 2)) / (count - 1);
 
-    // 가로 다리들을 랜덤하게 생성 (총 다리 수는 인원에 비례)
-    var bridgeCount = count * 3;
-    var levels = 15; // 다리가 배치될 수 있는 등분선
+    // 💡 [선 조금 더 추가] levels를 15 -> 25단계로 늘려 촘촘하게 설계
+    var levels = 25; 
+    // 💡 다리 개수를 기존 인원수 * 3 에서 인원수 * 5 배수로 대폭 확장
+    var bridgeCount = count * 5; 
     
     for (var i = 0; i < bridgeCount; i++) {
         var startLine = Math.floor(Math.random() * (count - 1));
-        var level = Math.floor(Math.random() * (levels - 2)) + 1; // 0과 끝 레벨은 제외
+        var level = Math.floor(Math.random() * (levels - 2)) + 1; // 0과 끝 레벨 제외
 
-        // 이미 같은 라인, 같은 레벨에 다리가 놓였는지 체크
+        // 이미 같은 자리에 다리가 있는지 체크
         var exists = ladderBridges.some(function(b) {
             return b.startLine === startLine && b.level === level;
         });
 
-        // 인접한 라인과 한 번에 다리 겹치지 않게 (서로 이어져 3개가 되는 것 방지)
+        // 좌우 연속으로 3단 다리가 연결되지 않도록 조절 (단조로움 방지)
         var neighbor = ladderBridges.some(function(b) {
             return (b.startLine === startLine - 1 || b.startLine === startLine + 1) && b.level === level;
         });
@@ -629,11 +628,11 @@ function generateLadderStructure() {
         }
     }
 
-    // 다리들을 높이별로 정렬
+    // 높이순 정렬
     ladderBridges.sort(function(a, b) { return a.level - b.level; });
 
-    // 각 라인별 플레이어 위치 초기화
-    var topY = 60; // 이름이 그려지는 밑단 Y값
+    // 플레이어 개별 고유 네온 칼라 지정
+    var topY = 60;
     participants.forEach(function(p, i) {
         var startX = padding + (i * colWidth);
         ladderPlayers.push({
@@ -660,12 +659,12 @@ function drawLadderInitial() {
 
     ladCtx.clearRect(0, 0, w, h);
     
-    // 배경
-    ladCtx.fillStyle = '#0e1022';
+    // 깊이 있는 네온 테마 다크 배경
+    ladCtx.fillStyle = '#0a0b16';
     ladCtx.fillRect(0, 0, w, h);
 
-    // 사다리 세로선 그리기
-    ladCtx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
+    // 격자 사다리 세로 기둥 그리기 (은은한 네온 그레이)
+    ladCtx.strokeStyle = 'rgba(255, 255, 255, 0.12)';
     ladCtx.lineWidth = 4;
     for (var i = 0; i < count; i++) {
         var x = padding + (i * colWidth);
@@ -674,23 +673,29 @@ function drawLadderInitial() {
         ladCtx.lineTo(x, bottomY);
         ladCtx.stroke();
 
-        // 위에 이름 배치
-        ladCtx.fillStyle = '#fff';
-        ladCtx.font = 'bold 13px Noto Sans KR';
+        // 💡 [사람이름이 랜덤한 색의 글씨로 적용]
+        var pColor = ladderColors[i % ladderColors.length];
+        ladCtx.save();
+        ladCtx.fillStyle = pColor;
+        ladCtx.font = 'bold 15px Noto Sans KR';
+        ladCtx.shadowColor = pColor;
+        ladCtx.shadowBlur = 8; // 이름 글씨에 글로우 효과 적용
         ladCtx.textAlign = 'center';
         ladCtx.fillText(participants[i].name, x, topY - 20);
+        ladCtx.restore();
 
-        // 아래에 입력한 상품 배치
+        // 아래에 입력한 상품 배치 (네온 민트 컬러)
         var prizeText = ladderPrizes[i] || '꽝';
-        ladCtx.fillStyle = 'rgba(0, 242, 254, 0.9)';
+        ladCtx.fillStyle = '#00f2fe';
         ladCtx.font = 'bold 13px Noto Sans KR';
+        ladCtx.textAlign = 'center';
         ladCtx.fillText(prizeText, x, bottomY + 25);
     }
 
-    // 사다리 가로 다리 그리기
-    ladCtx.strokeStyle = 'rgba(255, 255, 255, 0.35)';
+    // 사다리 가로 다리 그리기 (촘촘해진 선)
+    ladCtx.strokeStyle = 'rgba(255, 255, 255, 0.22)';
     ladCtx.lineWidth = 3;
-    var stepH = (bottomY - topY) / 15;
+    var stepH = (bottomY - topY) / 25; // 25 등분
     ladderBridges.forEach(function(b) {
         var x1 = padding + (b.startLine * colWidth);
         var x2 = padding + ((b.startLine + 1) * colWidth);
@@ -708,7 +713,6 @@ function runLadderSimulation() {
     ladOverlay.style.display = 'block';
     ladderActive = true;
 
-    // 사다리 타기 로직 시뮬레이션 돌려놓기 (애니메이션에서 순서대로 이동하기 위함)
     var w = ladCvs.width;
     var h = ladCvs.height;
     var count = participants.length;
@@ -716,94 +720,87 @@ function runLadderSimulation() {
     var colWidth = (w - (padding * 2)) / (count - 1);
     var topY = 60;
     var bottomY = h - 60;
-    var stepH = (bottomY - topY) / 15;
+    var stepH = (bottomY - topY) / 25; // levels = 25
 
-    // 각 라인별 현재 Y 위치
-    var curY = topY;
+    var stepSize = 4; // 속도감 있게 4픽셀씩 이동
     
-    // 사다리 진행 루프
-    var stepSize = 3; // 스텝당 하강할 프레임 수
-    var animFrame = 0;
-
     function animLoop() {
         if (!ladderActive) return;
 
         var allDone = true;
         ladCtx.clearRect(0, 0, w, h);
         
-        // 사다리 구조 다시 그리기
+        // 베이스 배경 및 사다리 구조
         drawLadderInitial();
 
-        // 플레이어별 선 따라 내려가기 렌더링
+        // 💡 [실제 사다리 타는 듯한 강렬한 네온 불빛 연출]
         ladderPlayers.forEach(function(p, pIdx) {
-            // 경로 그리기
+            ladCtx.save();
+            
+            // 1) 지나간 궤적 네온 발광 그리기
             ladCtx.strokeStyle = p.color;
-            ladCtx.lineWidth = 4;
+            ladCtx.lineWidth = 5;
+            ladCtx.shadowColor = p.color;
+            ladCtx.shadowBlur = 10;
+            ladCtx.lineCap = 'round';
+            ladCtx.lineJoin = 'round';
+            
             ladCtx.beginPath();
             ladCtx.moveTo(p.path[0].x, p.path[0].y);
             for (var k = 1; k < p.path.length; k++) {
                 ladCtx.lineTo(p.path[k].x, p.path[k].y);
             }
-            // 현재 위치 그리기
+            ladCtx.stroke();
+            
             var lastPt = p.path[p.path.length - 1];
-            ladCtx.stroke();
 
-            // 점 그리기 (플레이어 헤드)
-            ladCtx.fillStyle = '#fff';
+            // 2) 현재 지점 헤드 라이트볼 그리기
+            ladCtx.fillStyle = '#ffffff';
+            ladCtx.shadowColor = '#ffffff';
+            ladCtx.shadowBlur = 15;
             ladCtx.beginPath();
-            ladCtx.arc(lastPt.x, lastPt.y, 6, 0, Math.PI*2);
+            ladCtx.arc(lastPt.x, lastPt.y, 7, 0, Math.PI*2);
             ladCtx.fill();
-            ladCtx.strokeStyle = p.color;
-            ladCtx.lineWidth = 2;
-            ladCtx.stroke();
+            
+            ladCtx.restore();
 
             if (!p.done) {
                 allDone = false;
-
-                // 하강 로직
                 var newY = lastPt.y + stepSize;
-                
-                // 이번 스텝에서 다리를 마주쳤는지 체크
                 var crossedBridge = null;
-                var currentLevel = Math.round((lastPt.y - topY) / stepH);
 
-                // 현재 Y값 근처에 있는 다리가 있는지 체크
+                // 다리 통과 여부 검사
                 ladderBridges.forEach(function(b) {
                     var bY = topY + (b.level * stepH);
-                    // 현재 점의 Y가 다리의 Y 위치를 통과할 때
                     if (lastPt.y < bY && newY >= bY) {
                         if (p.lineIndex === b.startLine) {
-                            crossedBridge = { bridge: b, direction: 1 }; // 오른쪽으로 이동
+                            crossedBridge = { bridge: b, direction: 1 };
                         } else if (p.lineIndex === b.startLine + 1) {
-                            crossedBridge = { bridge: b, direction: -1 }; // 왼쪽으로 이동
+                            crossedBridge = { bridge: b, direction: -1 };
                         }
                     }
                 });
 
                 if (crossedBridge) {
-                    // 다리가 위치한 Y 높이로 보정
                     var bY = topY + (crossedBridge.bridge.level * stepH);
                     p.path.push({ x: lastPt.x, y: bY });
 
-                    // 옆 라인 X로 수평 이동 추가
                     p.lineIndex += crossedBridge.direction;
                     var nextX = padding + (p.lineIndex * colWidth);
                     p.path.push({ x: nextX, y: bY });
 
-                    playShoot(); // 옆으로 꺾일 때 틱 소리
+                    playShoot(); // 옆으로 꺾일 때 소리 효과
                 } else {
-                    // 그냥 아래로 전진
                     if (newY >= bottomY) {
                         p.path.push({ x: lastPt.x, y: bottomY });
                         p.done = true;
                         
-                        // 결과 저장 (이 세로선 인덱스 하단에 적힌 상품)
                         var resultPrize = ladderPrizes[p.lineIndex] || '꽝';
                         ladderResult.push({
                             name: p.name,
                             prize: resultPrize
                         });
-                        playHit(); // 당첨 효과음
+                        playHit(); // 도착음
                     } else {
                         p.path.push({ x: lastPt.x, y: newY });
                     }
@@ -813,7 +810,7 @@ function runLadderSimulation() {
 
         if (allDone) {
             ladderActive = false;
-            setTimeout(showLadderResult, 1000);
+            setTimeout(showLadderResult, 1200);
         } else {
             requestAnimationFrame(animLoop);
         }
@@ -821,6 +818,8 @@ function runLadderSimulation() {
 
     requestAnimationFrame(animLoop);
 }
+
+
 
 function showLadderResult() {
     // 결과 화면 노출
