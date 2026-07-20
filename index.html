@@ -10,25 +10,11 @@
     <link rel="icon" href="data:;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==">
     <link rel="stylesheet" href="style.css">
     
-    <!-- Supabase SDK 로드 시도 (1번 CDN: unpkg) -->
-    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
-    
-    <!-- SDK 로드 실패 시 백업용 로드 시도 (2번 CDN: cdnjs) -->
-    <script>
-        if (typeof supabase === 'undefined' && typeof createClient === 'undefined') {
-            document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/supabase/2.39.8/supabase.js"><\/script>');
-        }
-    </script>
-
-    <!-- SDK 로드 실패 시 백업용 로드 시도 (3번 CDN: jsdelivr) -->
-    <script>
-        if (typeof supabase === 'undefined' && typeof createClient === 'undefined') {
-            document.write('<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"><\/script>');
-        }
-    </script>
+    <!-- 프로젝트에 직접 다운로드한 로컬 Supabase SDK 로딩 (외부 차단 영향 0%) -->
+    <script src="supabase.js"></script>
     
     <!-- 앱 메인 스크립트 -->
-    <script defer src="app.js?v=3.7"></script>
+    <script defer src="app.js?v=3.8"></script>
 </head>
 <body>
     <div class="stars-background"></div>
@@ -118,7 +104,7 @@
             </div>
             <div class="stage-controls">
                 <button type="button" id="fireCannonBtn" class="btn btn-accent btn-large pulse">🔥 대포 발사!</button>
-                <div class="guide-text">대포 발사 버튼을 누르면 대포가 알아서 조준하고 쏩니다!</div>
+                <div class="guide-text">대포 발사 버튼을 누르면 대포가 알아서 조준하고 니다!</div>
             </div>
         </section>
 
