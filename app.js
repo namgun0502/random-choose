@@ -318,8 +318,8 @@ function playVictorySound() {
 
 // 5. 비즈니스 로직 (참여자 관리 및 셔플 알고리즘)
 
-// 참여자 추가 핸들러
-function handleAddName() {
+// 참여자 추가 핸들러 (Supabase가 연결된 경우 DB에도 함께 저장)
+async function handleAddName() {
     const rawName = nameInput.value.trim();
     if (!rawName) {
         alert("이름을 입력해 주세요!");
@@ -333,7 +333,7 @@ function handleAddName() {
         return;
     }
 
-    // 이름 추가
+    // 이름 추가 (로컬 배열에 먼저 반영)
     participants.push({
         name: rawName,
         number: 0 // 임시 배정
@@ -345,9 +345,27 @@ function handleAddName() {
     // 셔플 및 UI 리뉴얼
     shuffleAndAssignNumbers();
     updateUI();
+
+    // Supabase가 연결되어 있으면 DB에도 영구 저장합니다.
+    if (supabase) {
+        try {
+            const { error } = await supabase
+                .from('members')
+                .insert([{ name: rawName }]);
+            if (error) {
+                // 이미 있는 이름이거나 DB 오류일 경우 알림 (로컬엔 이미 추가됨)
+                console.warn("Supabase 저장 실패:", error.message);
+                if (error.code === '23505') { // unique violation
+                    alert(`"${rawName}"은(는) 수파베이스에 이미 등록된 이름입니다.`);
+                }
+            }
+        } catch (err) {
+            console.error("Supabase 저장 중 오류:", err);
+        }
+    }
 }
 
-// 참여자 삭제 핸들러
+// 참여자 삭제 핸들러 - 화면에서만 임시 제외 (Supabase DB에는 영향 없음)
 function removeParticipant(name) {
     participants = participants.filter(p => p.name !== name);
     
