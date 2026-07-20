@@ -359,8 +359,16 @@ function endGame(){
 function onCloseModal(){
     hitModal.classList.remove('active');
     overlay.style.display='none';
-    if(remainShots<=0) endGame();
-    else fireBtn.disabled=false;
+    if(remainShots<=0) {
+        endGame();
+    } else {
+        // 💡 [한번만 누르면 느리게 계속 자동발사] 모달 닫히고 1초 대기 후 자동으로 다음 발사 트리거
+        setTimeout(function() {
+            if (gameState === 'PLAYING') {
+                fireCannon();
+            }
+        }, 1000);
+    }
 }
 
 function restartSame(){
@@ -385,7 +393,11 @@ function resetAll(){
     nameInput.value=''; countInput.value=1; totalShots=1; countVal.textContent='1회';
     stepPlay.classList.remove('active');
     stepResult.classList.remove('active');
-    stepReady.style.display='flex';
+    
+    document.getElementById('commonParticipantSection').style.display = 'flex';
+    document.querySelector('.tab-container').style.display = 'flex';
+    cannonSettings.classList.add('active');
+    
     updateUI(); loadFromDb();
 }
 
@@ -462,8 +474,16 @@ function hitTarget(tgt){
         hitNumEl.textContent=tgt.number; hitNameEl.textContent=tgt.name;
         hitModal.classList.add('active');
         targets=targets.filter(function(t){ return t.alive; }); arrangeTargets();
+        
+        // 💡 [대포 자동 닫힘 및 자동연속발사 연계] 1.2초 후에 당첨 팝업을 자동으로 닫음
+        setTimeout(function() {
+            if (gameState === 'PLAYING') {
+                onCloseModal();
+            }
+        }, 1200);
     }, 500);
 }
+
 
 function draw(){
     ctx.clearRect(0,0,cvs.width,cvs.height);
