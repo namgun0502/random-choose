@@ -318,8 +318,8 @@ function playVictorySound() {
 
 // 5. 비즈니스 로직 (참여자 관리 및 셔플 알고리즘)
 
-// 참여자 추가 핸들러 (Supabase가 연결된 경우 DB에도 함께 저장)
-async function handleAddName() {
+// 참여자 추가 핸들러 (동기 처리 - UI 즉시 반영)
+function handleAddName() {
     const rawName = nameInput.value.trim();
     if (!rawName) {
         alert("이름을 입력해 주세요!");
@@ -333,43 +333,38 @@ async function handleAddName() {
         return;
     }
 
-    // 이름 추가 (로컬 배열에 먼저 반영)
-    participants.push({
-        name: rawName,
-        number: 0 // 임시 배정
-    });
-
+    // ① 로컬 배열에 먼저 추가 (화면에 즉시 반영)
+    participants.push({ name: rawName, number: 0 });
     nameInput.value = "";
     nameInput.focus();
-
-    // 셔플 및 UI 리뉴얼
     shuffleAndAssignNumbers();
     updateUI();
 
-    // Supabase가 연결되어 있으면 DB에도 영구 저장합니다.
-    if (supabase) {
-        try {
-            const { error } = await supabase
-                .from('members')
-                .insert([{ name: rawName }]);
-            if (error) {
-                // 이미 있는 이름이거나 DB 오류일 경우 알림 (로컬엔 이미 추가됨)
-                console.warn("Supabase 저장 실패:", error.message);
-                if (error.code === '23505') { // unique violation
-                    alert(`"${rawName}"은(는) 수파베이스에 이미 등록된 이름입니다.`);
-                }
-            }
-        } catch (err) {
-            console.error("Supabase 저장 중 오류:", err);
+    // ② Supabase 저장은 별도 비동기 함수로 분리 (UI 업데이트와 독립적으로 동작)
+    saveNameToSupabase(rawName);
+}
+
+// Supabase DB에 이름을 영구 저장하는 비동기 함수 (handleAddName과 분리)
+async function saveNameToSupabase(name) {
+    if (!supabase) return; // Supabase 미연결 시 조용히 종료
+
+    try {
+        const { error } = await supabase
+            .from('members')
+            .insert([{ name: name }]);
+
+        if (error && error.code !== '23505') {
+            // 23505 = 중복 키 에러 (이미 DB에 있는 이름은 무시)
+            console.warn("Supabase 저장 실패:", error.message);
         }
+    } catch (err) {
+        console.error("Supabase 저장 중 오류:", err);
     }
 }
 
-// 참여자 삭제 핸들러 - 화면에서만 임시 제외 (Supabase DB에는 영향 없음)
+// 참여자 삭제 핸들러 - 이번 게임에서만 임시 제외 (Supabase DB에는 영향 없음)
 function removeParticipant(name) {
     participants = participants.filter(p => p.name !== name);
-    
-    // 셔플 및 UI 리뉴얼
     shuffleAndAssignNumbers();
     updateUI();
 }
