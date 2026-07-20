@@ -1,0 +1,805 @@
+/* ==========================================
+   대포 랜덤 당첨 게임 - Cannon Draw CSS
+   작성자: Antigravity
+   스타일: 다크 네온, 글래스모피즘, 프리미엄 애니메이션
+   ========================================== */
+
+/* 1. 글로벌 테마 변수 및 초기화 */
+:root {
+    --bg-primary: #0a0b14;
+    --bg-secondary: #121424;
+    --card-bg: rgba(26, 29, 54, 0.65);
+    --card-border: rgba(255, 255, 255, 0.08);
+    --text-primary: #f1f3f9;
+    --text-secondary: #9aa0c2;
+    --color-accent: #ff3366; /* 대포/폭발 핑크 */
+    --color-primary: #4facfe; /* 네온 블루 */
+    --color-primary-glow: rgba(79, 172, 254, 0.4);
+    --color-success: #00f2fe; /* 사이안 */
+    --color-warning: #ffd200; /* 골드 */
+    --color-danger: #ff4b4b; /* 레드 */
+    --font-main: 'Noto Sans KR', sans-serif;
+    --font-logo: 'Outfit', sans-serif;
+    --transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    --shadow-neon: 0 0 20px rgba(79, 172, 254, 0.3);
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: var(--font-main);
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    overflow-x: hidden;
+    position: relative;
+}
+
+/* 별빛 밤하늘 배경 효과 */
+.stars-background {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: 
+        radial-gradient(circle at 20% 30%, rgba(79, 172, 254, 0.15) 0%, transparent 40%),
+        radial-gradient(circle at 80% 70%, rgba(255, 51, 102, 0.12) 0%, transparent 40%),
+        linear-gradient(135deg, var(--bg-primary) 0%, #151833 100%);
+    z-index: -2;
+}
+
+/* 반짝이는 작은 별 입자 효과 */
+.stars-background::before {
+    content: "";
+    position: absolute;
+    width: 2px;
+    height: 2px;
+    background: white;
+    box-shadow: 
+        10vw 20vh 1px 1px rgba(255,255,255,0.4),
+        30vw 15vh 1px 0px rgba(255,255,255,0.3),
+        70vw 25vh 1px 1px rgba(255,255,255,0.5),
+        85vw 10vh 1px 0px rgba(255,255,255,0.4),
+        15vw 60vh 2px 1px rgba(255,255,255,0.3),
+        40vw 75vh 1px 1px rgba(255,255,255,0.4),
+        65vw 80vh 1px 0px rgba(255,255,255,0.2),
+        90vw 55vh 2px 2px rgba(255,255,255,0.5);
+    border-radius: 50%;
+    animation: twinkle 5s infinite ease-in-out alternate;
+    z-index: -1;
+}
+
+@keyframes twinkle {
+    0% { opacity: 0.3; }
+    100% { opacity: 0.9; }
+}
+
+/* 2. 전체 앱 컨테이너 */
+.app-container {
+    width: 100%;
+    max-width: 800px;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    z-index: 1;
+}
+
+/* 3. 헤더 디자인 */
+.app-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 20px;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 16px;
+    border: 1px solid var(--card-border);
+    backdrop-filter: blur(10px);
+}
+
+.logo {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.logo .icon {
+    font-size: 2rem;
+    filter: drop-shadow(0 0 8px var(--color-accent));
+    animation: pulseIcon 2s infinite ease-in-out;
+}
+
+@keyframes pulseIcon {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+    100% { transform: scale(1); }
+}
+
+.logo h1 {
+    font-family: var(--font-logo);
+    font-size: 1.6rem;
+    font-weight: 800;
+    letter-spacing: 2px;
+    color: var(--text-primary);
+}
+
+.logo h1 .highlight {
+    background: linear-gradient(90deg, var(--color-primary), var(--color-success));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    text-shadow: 0 0 15px rgba(0, 242, 254, 0.2);
+}
+
+.control-btn {
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid var(--card-border);
+    padding: 8px 16px;
+    border-radius: 50px;
+    color: var(--text-primary);
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: var(--transition);
+}
+
+.control-btn:hover {
+    background: rgba(255, 255, 255, 0.15);
+    border-color: var(--color-primary);
+    box-shadow: 0 0 10px var(--color-primary-glow);
+}
+
+/* 4. 메인 카드 레이아웃 (준비 화면, 결과 화면) */
+.game-card {
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: 24px;
+    padding: 30px;
+    backdrop-filter: blur(16px);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+    display: none; /* 기본적으로 비표시 */
+    flex-direction: column;
+    gap: 25px;
+    animation: slideUp 0.5s cubic-bezier(0.25, 0.8, 0.25, 1) forwards;
+}
+
+.game-card.active {
+    display: flex; /* 활성화 시 노출 */
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.card-header h2 {
+    font-size: 1.6rem;
+    font-weight: 700;
+    margin-bottom: 6px;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.card-header .subtitle {
+    font-size: 0.95rem;
+    color: var(--text-secondary);
+}
+
+/* 5. 폼 구성요소 */
+.input-section {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.input-section label {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.input-group {
+    display: flex;
+    gap: 10px;
+}
+
+.input-group input {
+    flex: 1;
+    background: rgba(0, 0, 0, 0.2);
+    border: 1px solid var(--card-border);
+    padding: 14px 20px;
+    border-radius: 14px;
+    color: #fff;
+    font-size: 1rem;
+    transition: var(--transition);
+}
+
+.input-group input:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: 0 0 10px var(--color-primary-glow);
+    background: rgba(0, 0, 0, 0.35);
+}
+
+.input-tip {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    font-style: italic;
+}
+
+/* 6. 버튼 디자인 */
+.btn {
+    border: none;
+    padding: 12px 24px;
+    border-radius: 12px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition);
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+}
+
+.btn:active {
+    transform: scale(0.97);
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, var(--color-primary) 0%, #0072ff 100%);
+    color: white;
+}
+
+.btn-primary:hover {
+    box-shadow: 0 0 15px var(--color-primary-glow);
+    filter: brightness(1.1);
+}
+
+.btn-secondary {
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--text-primary);
+    border: 1px solid var(--card-border);
+}
+
+.btn-secondary:hover {
+    background: rgba(255, 255, 255, 0.18);
+}
+
+.btn-accent {
+    background: linear-gradient(135deg, var(--color-accent) 0%, #d5006d 100%);
+    color: white;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+
+.btn-accent:hover:not(:disabled) {
+    box-shadow: 0 0 20px rgba(255, 51, 102, 0.4);
+    filter: brightness(1.1);
+}
+
+.btn-danger {
+    background: linear-gradient(135deg, var(--color-danger) 0%, #b30000 100%);
+    color: white;
+}
+
+.btn-danger:hover {
+    box-shadow: 0 0 15px rgba(255, 75, 75, 0.3);
+}
+
+.btn-large {
+    padding: 16px 32px;
+    font-size: 1.1rem;
+    border-radius: 16px;
+    width: 100%;
+}
+
+.btn-sm {
+    padding: 6px 12px;
+    font-size: 0.8rem;
+    border-radius: 8px;
+}
+
+.btn:disabled {
+    background: rgba(255, 255, 255, 0.05);
+    color: rgba(255, 255, 255, 0.25);
+    border: 1px solid rgba(255, 255, 255, 0.02);
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+    filter: none;
+}
+
+/* 7. 참여자 칩스(Chips) 목록 */
+.list-section {
+    background: rgba(0, 0, 0, 0.15);
+    border-radius: 16px;
+    padding: 20px;
+    border: 1px solid rgba(0,0,0,0.15);
+}
+
+.list-section h3 {
+    font-size: 1rem;
+    font-weight: 600;
+    margin-bottom: 12px;
+    color: var(--text-secondary);
+}
+
+.participant-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    max-height: 180px;
+    overflow-y: auto;
+    padding-right: 4px;
+}
+
+.participant-chips::-webkit-scrollbar {
+    width: 6px;
+}
+
+.participant-chips::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 3px;
+}
+
+.empty-message {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    font-style: italic;
+    width: 100%;
+    text-align: center;
+    padding: 20px 0;
+}
+
+.chip {
+    display: inline-flex;
+    align-items: center;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid var(--card-border);
+    padding: 6px 12px 6px 14px;
+    border-radius: 50px;
+    font-size: 0.9rem;
+    gap: 8px;
+    animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+    transition: var(--transition);
+}
+
+.chip:hover {
+    background: rgba(255, 255, 255, 0.12);
+    border-color: var(--color-primary);
+}
+
+.chip .num-badge {
+    background: var(--color-warning);
+    color: #000;
+    font-weight: 700;
+    font-family: var(--font-logo);
+    padding: 2px 7px;
+    border-radius: 50px;
+    font-size: 0.75rem;
+}
+
+.chip button {
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    font-size: 1.1rem;
+    line-height: 1;
+    cursor: pointer;
+    padding: 0 2px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: var(--transition);
+}
+
+.chip button:hover {
+    color: var(--color-danger);
+    transform: scale(1.2);
+}
+
+@keyframes popIn {
+    from {
+        opacity: 0;
+        transform: scale(0.7);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+/* 8. 설정 슬라이더 */
+.settings-section {
+    border-top: 1px solid var(--card-border);
+    padding-top: 20px;
+}
+
+.setting-item {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.setting-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.setting-info label {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.setting-info .tip {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+}
+
+.range-group {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.range-group input[type="range"] {
+    flex: 1;
+    -webkit-appearance: none;
+    appearance: none;
+    height: 8px;
+    border-radius: 4px;
+    background: rgba(0, 0, 0, 0.3);
+    outline: none;
+    transition: var(--transition);
+}
+
+.range-group input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: var(--color-primary);
+    cursor: pointer;
+    box-shadow: 0 0 10px var(--color-primary);
+    transition: var(--transition);
+}
+
+.range-group input[type="range"]::-webkit-slider-thumb:hover {
+    transform: scale(1.2);
+}
+
+.range-group .badge {
+    background: var(--color-primary-glow);
+    border: 1px solid var(--color-primary);
+    color: var(--color-success);
+    font-family: var(--font-logo);
+    font-weight: 700;
+    padding: 6px 12px;
+    border-radius: 10px;
+    font-size: 1rem;
+    min-width: 60px;
+    text-align: center;
+}
+
+/* 9. 게임 플레이 화면 (스테이지) */
+.game-stage {
+    display: none; /* 기본 비표시 */
+    flex-direction: column;
+    gap: 16px;
+    animation: slideUp 0.5s ease-out;
+}
+
+.game-stage.active {
+    display: flex;
+}
+
+.stage-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    padding: 15px 24px;
+    border-radius: 16px;
+    backdrop-filter: blur(10px);
+}
+
+.stage-info h2 {
+    font-size: 1.2rem;
+    font-weight: 700;
+    margin-bottom: 2px;
+}
+
+.stage-info p {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+}
+
+.highlight-badge {
+    background: var(--color-accent);
+    color: white;
+    font-weight: 700;
+    font-family: var(--font-logo);
+    padding: 2px 8px;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    box-shadow: 0 0 10px rgba(255, 51, 102, 0.4);
+}
+
+.canvas-wrapper {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 16 / 10;
+    background: radial-gradient(circle at center, #1b2144 0%, #0d0f21 100%);
+    border-radius: 20px;
+    border: 2px solid var(--card-border);
+    overflow: hidden;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5), inset 0 0 30px rgba(0,0,0,0.6);
+}
+
+#gameCanvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+
+.canvas-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 10;
+    display: none; /* 애니메이션 도중에만 blocker 역할 */
+}
+
+.stage-controls {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+}
+
+.guide-text {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    font-style: italic;
+}
+
+.pulse {
+    animation: elementPulse 1.5s infinite;
+}
+
+@keyframes elementPulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.03); box-shadow: 0 0 25px rgba(255, 51, 102, 0.6); }
+    100% { transform: scale(1); }
+}
+
+/* 10. 모달 스타일 (개별 당첨 효과) */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(5, 6, 12, 0.85);
+    backdrop-filter: blur(8px);
+    z-index: 100;
+    display: none;
+    justify-content: center;
+    align-items: center;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.modal-overlay.active {
+    display: flex;
+    opacity: 1;
+}
+
+.modal-content {
+    background: radial-gradient(circle at center, #24294d 0%, #151833 100%);
+    border: 2px solid rgba(0, 242, 254, 0.4);
+    box-shadow: 0 0 40px rgba(0, 242, 254, 0.25), 0 30px 60px rgba(0,0,0,0.6);
+    border-radius: 30px;
+    padding: 40px;
+    max-width: 400px;
+    width: 90%;
+    text-align: center;
+    transform: scale(0.8);
+    transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 15px;
+}
+
+.modal-overlay.active .modal-content {
+    transform: scale(1);
+}
+
+.modal-badge {
+    background: var(--color-accent);
+    color: white;
+    font-weight: 800;
+    padding: 6px 16px;
+    border-radius: 50px;
+    font-size: 0.8rem;
+    letter-spacing: 1px;
+    box-shadow: 0 0 15px rgba(255, 51, 102, 0.5);
+}
+
+.modal-number-circle {
+    width: 100px;
+    height: 100px;
+    background: linear-gradient(135deg, var(--color-primary), var(--color-success));
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-family: var(--font-logo);
+    font-size: 3rem;
+    font-weight: 800;
+    color: #0a0b14;
+    box-shadow: 0 10px 25px rgba(0, 242, 254, 0.3);
+    border: 4px solid rgba(255,255,255,0.2);
+}
+
+.modal-winner-name {
+    font-size: 2.2rem;
+    font-weight: 900;
+    color: #fff;
+    text-shadow: 0 0 10px rgba(255,255,255,0.3);
+}
+
+.modal-message {
+    font-size: 0.95rem;
+    color: var(--text-secondary);
+}
+
+/* 11. 최종 결과 카드 디자인 */
+.trophy-icon {
+    font-size: 4rem;
+    margin-bottom: 10px;
+    filter: drop-shadow(0 0 15px var(--color-warning));
+    animation: bounce 2s infinite;
+}
+
+@keyframes bounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+}
+
+.text-center {
+    text-align: center;
+}
+
+.winners-section {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 20px;
+    padding: 24px;
+    border: 1px solid rgba(255,255,255,0.03);
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.winners-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.winner-card {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--card-border);
+    padding: 16px 24px;
+    border-radius: 14px;
+    transition: var(--transition);
+    animation: slideUp 0.4s ease-out forwards;
+}
+
+.winner-card:hover {
+    background: rgba(255, 255, 255, 0.09);
+    border-color: var(--color-warning);
+    box-shadow: 0 0 15px rgba(255, 210, 0, 0.15);
+}
+
+.winner-rank-info {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.winner-rank {
+    font-family: var(--font-logo);
+    font-weight: 800;
+    font-size: 1.2rem;
+    color: var(--color-warning);
+}
+
+.winner-name {
+    font-size: 1.1rem;
+    font-weight: 700;
+}
+
+.winner-number {
+    font-family: var(--font-logo);
+    font-size: 0.95rem;
+    background: rgba(255, 255, 255, 0.08);
+    padding: 4px 10px;
+    border-radius: 8px;
+    color: var(--color-success);
+    font-weight: 600;
+}
+
+.result-actions {
+    display: flex;
+    gap: 12px;
+}
+
+.result-actions button {
+    flex: 1;
+}
+
+/* 12. 모바일 반응형 조절 */
+@media (max-width: 600px) {
+    .app-container {
+        padding: 10px;
+    }
+    
+    .game-card {
+        padding: 20px;
+    }
+
+    .app-header {
+        padding: 10px 14px;
+    }
+
+    .logo h1 {
+        font-size: 1.3rem;
+    }
+
+    .logo .icon {
+        font-size: 1.6rem;
+    }
+
+    .modal-content {
+        padding: 30px 20px;
+    }
+
+    .modal-winner-name {
+        font-size: 1.8rem;
+    }
+
+    .result-actions {
+        flex-direction: column;
+        gap: 10px;
+    }
+}
