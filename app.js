@@ -239,79 +239,64 @@ function shuffle(){
 }
 
 // =============================================
-// [6] 수파베이스 연동 (안전 대기 루프 적용)
+// [6] 수파베이스 연동 (REST API 직접 통신 방식)
 // =============================================
-(function initDb(){
-    var retries = 0;
-    function tryConnect() {
-        var sdk = window.supabase || null;
-        var mk  = (typeof createClient !== 'undefined') ? createClient
-               : (sdk && sdk.createClient ? sdk.createClient : null);
-        
-        if(!mk){
-            retries++;
-            if (retries < 50) {
-                setTimeout(tryConnect, 100);
-            } else {
-                console.warn('수파베이스 SDK 미로드 - 로칼 모드로 작동');
-                var sdkType = typeof window.supabase;
-                var hasCreateClient = (window.supabase && typeof window.supabase.createClient !== 'undefined');
-                alert('수파베이스 연동 실패!\n' +
-                      '- window.supabase 타입: ' + sdkType + '\n' +
-                      '- createClient 존재여부: ' + hasCreateClient + '\n' +
-                      '- 현재 탐색 시도 횟수: ' + retries + '회\n\n' +
-                      '이 메시지가 나온다면 브라우저를 강제 새로고침(Ctrl+Shift+R)해 주세요.');
-            }
-            return;
-        }
-        
-        try {
-            supabase = mk(SUPABASE_URL, SUPABASE_KEY);
-            console.log('수파베이스 연결 성공!');
-            loadFromDb();
-        } catch(e) {
-            console.error('수파베이스 클라이언트 생성 오류:', e.message);
-        }
-    }
-    tryConnect();
-})();
-
-
-
 function loadFromDb(){
-    if(!supabase) {
-        console.warn('수파베이스 클라이언트가 생성되지 않았습니다.');
-        return;
-    }
-    supabase.from('members').select('name').order('id',{ascending:true})
-        .then(function(res){
-            if(res.error){ 
-                alert('DB 불러오기 실패 (테이블 조회 에러):\n' + res.error.message);
-                console.error('로드 실패:', res.error.message); 
-                return; 
-            }
-            if(!res.data||!res.data.length) return;
-            var existing = participants.map(function(p){ return p.name; });
-            res.data.forEach(function(row){
-                if(!existing.includes(row.name))
-                    participants.push({ name:row.name, number:0 });
-            });
-            shuffle(); updateUI();
-        }).catch(function(e){ 
-            alert('DB 불러오기 에러 (네트워크/연결):\n' + e.message);
-            console.error('로드 오류:', e.message); 
+    fetch(SUPABASE_URL + "/rest/v1/members?select=name&order=id.asc", {
+        method: "GET",
+        headers: {
+            "apikey": SUPABASE_KEY,
+            "Authorization": "Bearer " + SUPABASE_KEY
+        }
+    })
+    .then(function(res) {
+        if (!res.ok) {
+            throw new Error("서버 응답 오류 (상태코드: " + res.status + ")");
+        }
+        return res.json();
+    })
+    .then(function(data) {
+        if (!data || !data.length) return;
+        var existing = participants.map(function(p){ return p.name; });
+        data.forEach(function(row){
+            if(!existing.includes(row.name))
+                participants.push({ name:row.name, number:0 });
         });
+        shuffle(); 
+        updateUI();
+        console.log("DB 데이터 로드 완료:", data);
+    })
+    .catch(function(e) {
+        console.warn("DB 로드 실패 (로컬 모드로 전환됩니다):", e.message);
+    });
 }
-
 
 function saveToDb(name){
-    if(!supabase) return;
-    supabase.from('members').insert([{name:name}])
-        .then(function(res){
-            if(res.error&&res.error.code!=='23505')
-                console.warn('저장 실패:', res.error.message);
-        }).catch(function(e){ console.error('저장 오류:', e.message); });
+    fetch(SUPABASE_URL + "/rest/v1/members", {
+        method: "POST",
+        headers: {
+            "apikey": SUPABASE_KEY,
+            "Authorization": "Bearer " + SUPABASE_KEY,
+            "Content-Type": "application/json",
+            "Prefer": "return=minimal"
+        },
+        body: JSON.stringify({ name: name })
+    })
+    .then(function(res) {
+        if (res.ok) {
+            console.log("DB 저장 완료:", name);
+        } else {
+            console.warn("DB 저장 응답 코드 경고:", res.status);
+        }
+    })
+    .catch(function(e) {
+        console.error("DB 저장 오류:", e.message);
+    });
 }
+
+// 시작 시 DB 자동 조회
+loadFromDb();
+
 
 // =============================================
 // [7] 대포 게임 플레이 코드
